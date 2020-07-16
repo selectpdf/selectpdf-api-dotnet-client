@@ -26,6 +26,10 @@ OR
 
 Install SelectPdf .NET Client for Online API via Nuget: [SelectPdf API on Nuget](https://www.nuget.org/packages/SelectPdf.Api/).
 
+```
+Install-Package SelectPdf.Api -Version 1.0.0
+```
+
 OR
 
 Clone [selectpdf-api-dotnet-client](https://github.com/selectpdf/selectpdf-api-dotnet-client) from Github and build the library.
