@@ -1097,5 +1097,28 @@ namespace SelectPdf.Api
             parameters["page_breaks_enhanced_algorithm"] = enableEnhancedPageBreaksAlgorithm.ToString();
             return this;
         }
+
+        /// <summary>
+        /// Set HTTP cookies for the web page being converted.
+        /// </summary>
+        /// <param name="cookies">HTTP cookies that will be sent to the page being converted.</param>
+        /// <returns>Reference to the current object.</returns>
+        public HtmlToPdfClient setCookies(Dictionary<string, string> cookies)
+        {
+            parameters["cookies_string"] = SerializeDictionary(cookies);
+            return this;
+        }
+
+        /// <summary>
+        /// Set a custom parameter. Do not use this method unless advised by SelectPdf.
+        /// </summary>
+        /// <param name="parameterName">Parameter name.</param>
+        /// <param name="parameterValue">Parameter value.</param>
+        /// <returns>Reference to the current object.</returns>
+        public HtmlToPdfClient setCustomParameter(string parameterName, string parameterValue)
+        {
+            parameters[parameterName] = parameterValue;
+            return this;
+        }
     }
 }

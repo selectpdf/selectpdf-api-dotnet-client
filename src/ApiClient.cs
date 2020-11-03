@@ -30,6 +30,28 @@ namespace SelectPdf.Api
         protected Dictionary<string, string> headers = new Dictionary<string, string>();
 
         /// <summary>
+        /// Constructor
+        /// </summary>
+        protected ApiClient()
+        {
+            // Up to 8 concurrent connections by default
+            System.Net.ServicePointManager.DefaultConnectionLimit = 8;
+        }
+
+        /// <summary>
+        /// Set the number of concurrent connections (between 1 and 16).
+        /// </summary>
+        /// <param name="connectionsNumber">Number of concurrent connections.</param>
+        public void setConcurrentConnections(int connectionsNumber)
+        {
+            if (connectionsNumber < 1 || System.Net.ServicePointManager.DefaultConnectionLimit > 16)
+            {
+                connectionsNumber = 8;
+            }
+            System.Net.ServicePointManager.DefaultConnectionLimit = connectionsNumber;
+        }
+
+        /// <summary>
         /// Set a custom SelectPdf API endpoint. Do not use this method unless advised by SelectPdf.
         /// </summary>
         /// <param name="apiEndpoint">API endpoint.</param>
@@ -52,6 +74,22 @@ namespace SelectPdf.Api
             }
 
             return sParameters;
+        }
+
+        /// <summary>
+        /// Serialize dictionary.
+        /// </summary>
+        /// <returns>Serialized dictionary.</returns>
+        protected string SerializeDictionary(Dictionary<string, string> dictionaryToSerialize)
+        {
+            string sString = "";
+
+            foreach (KeyValuePair<string, string> entry in dictionaryToSerialize)
+            {
+                sString += entry.Key + "=" + Uri.EscapeDataString(entry.Value) + "&";
+            }
+
+            return sString;
         }
 
         /// <summary>
@@ -81,14 +119,23 @@ namespace SelectPdf.Api
             // send headers
             foreach (KeyValuePair<string, string> header in headers)
             {
-                string headerName = header.Key;
-                string headerValue = header.Value;
-                string encodedHeaderName;
-                string encodedHeaderValue;
+                if (WebHeaderCollection.IsRestricted(header.Key))
+                {
+                    if (header.Key.ToLower() == "accept")
+                    {
+                        request.Accept = header.Value;
+                    }
+                }
+                else
+                {
+                    string headerName = header.Key;
+                    string headerValue = header.Value;
+                    string encodedHeaderName;
+                    string encodedHeaderValue;
 
-                HeaderNameValueEncode(headerName, headerValue, out encodedHeaderName, out encodedHeaderValue);
-                request.Headers.Add(encodedHeaderName, encodedHeaderValue);
-
+                    HeaderNameValueEncode(headerName, headerValue, out encodedHeaderName, out encodedHeaderValue);
+                    request.Headers.Add(encodedHeaderName, encodedHeaderValue);
+                }
             }
 
             // POST parameters
@@ -124,7 +171,7 @@ namespace SelectPdf.Api
                 else
                 {
                     // error - get error message
-                    throw new ApiException(string.Format("({0}) {1}", response.StatusCode, response.StatusDescription));
+                    throw new ApiException(string.Format("({0}) {1}", (int)response.StatusCode, response.StatusDescription));
                 }
             }
             catch (WebException webEx)
@@ -146,7 +193,7 @@ namespace SelectPdf.Api
                     responseStream.Close();
 
                     //throw new ApiException(string.Format("({0}) {1} - {2}", response.StatusCode, response.StatusDescription, message), webEx);
-                    throw new ApiException(string.Format("({0}) {1}", response.StatusCode, message), webEx);
+                    throw new ApiException(string.Format("({0}) {1}", (int)response.StatusCode, message), webEx);
                 }
             }
         }

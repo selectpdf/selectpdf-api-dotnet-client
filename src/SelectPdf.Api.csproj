@@ -2,6 +2,18 @@
 
   <PropertyGroup>
     <TargetFrameworks>net20;net40;netstandard2.0</TargetFrameworks>
+    <DocumentationFile>SelectPdf.Api.xml</DocumentationFile>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <Authors>SelectPdf</Authors>
+    <Product>.NET client for SelectPdf Online REST API</Product>
+    <PackageProjectUrl>https://selectpdf.com/html-to-pdf-api/</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/selectpdf/selectpdf-api-dotnet-client</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <Description>SelectPdf HTML To PDF Online REST API is a professional solution that lets you create PDF from web pages and raw HTML code in your applications. The API is easy to use and the integration takes only a few lines of code. The generated PDFs are perfect. That makes SelectPdf API the best html to pdf online service that can be used.</Description>
+    <PackageTags>pdf, html-to-pdf, html-to-pdf-api</PackageTags>
+    <Version>1.0.1</Version>
+    <AssemblyVersion>1.0.1</AssemblyVersion>
+    <FileVersion>1.0.1</FileVersion>
   </PropertyGroup>
 
 </Project>
