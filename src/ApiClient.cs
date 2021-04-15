@@ -30,6 +30,16 @@ namespace SelectPdf.Api
         protected Dictionary<string, string> headers = new Dictionary<string, string>();
 
         /// <summary>
+        /// Number of pages of the pdf document resulted from the conversion.
+        /// </summary>
+        protected int numberOfPages = 0;
+
+        /// <summary>
+        /// Web elements locations. This is retrieved if pdf_web_elements_selectors parameter is set and elements were found to match the selectors.
+        /// </summary>
+        protected IList<WebElement> webElements = null;
+
+        /// <summary>
         /// Constructor
         /// </summary>
         protected ApiClient()
@@ -99,6 +109,8 @@ namespace SelectPdf.Api
         /// <returns>If output stream is not specified, return response as byte array.</returns>
         protected byte[] PerformPost(Stream outStream)
         {
+            numberOfPages = 0;
+
             // serialize parameters
             string serializedParameters = SerializeParameters();
             byte[] byteData = Encoding.UTF8.GetBytes(serializedParameters);
@@ -151,6 +163,28 @@ namespace SelectPdf.Api
 
                 if (response.StatusCode == HttpStatusCode.OK)
                 {
+                    // get number of pages from the header
+                    try
+                    {
+                        if (!string.IsNullOrEmpty(response.Headers["selectpdf-api-pages"]))
+                        {
+                            numberOfPages = Convert.ToInt32(response.Headers["selectpdf-api-pages"]);
+                        }
+                    } catch { }
+
+                    // get web elements
+                    string base64EncodedWebElements = response.Headers["selectpdf-api-web-elements"]; // this is a base64 encoded serialized json
+                    if (!string.IsNullOrEmpty(base64EncodedWebElements))
+                    {
+                        // decode from base64
+                        byte[] byteArray = Convert.FromBase64String(base64EncodedWebElements);
+                        string webElementsJson = Encoding.UTF8.GetString(byteArray);
+
+                        // deserialize json
+                        webElements = Newtonsoft.Json.JsonConvert.DeserializeObject<IList<WebElement>>(webElementsJson);
+                    }
+
+
                     // Get the response stream with the content returned by the server
                     using (Stream responseStream = response.GetResponseStream())
                     {
