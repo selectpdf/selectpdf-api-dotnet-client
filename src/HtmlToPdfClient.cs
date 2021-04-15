@@ -770,6 +770,29 @@ namespace SelectPdf.Api
             return this;
         }
 
+        /// <summary>
+        /// Set the width in pixels used by the converter's internal browser window during the conversion of the header content. The default value is 1024px.
+        /// </summary>
+        /// <param name="headerWebPageWidth">Browser window width in pixels.</param>
+        /// <returns>Reference to the current object.</returns>
+        public HtmlToPdfClient setHeaderWebPageWidth(int headerWebPageWidth)
+        {
+            parameters["header_web_page_width"] = headerWebPageWidth.ToString();
+            return this;
+        }
+
+        /// <summary>
+        /// Set the height in pixels used by the converter's internal browser window during the conversion of the header content. 
+        /// The default value is 0px and it means that the page height is automatically calculated by the converter.
+        /// </summary>
+        /// <param name="headerWebPageHeight">Browser window height in pixels. Set it to 0px to automatically calculate page height.</param>
+        /// <returns>Reference to the current object.</returns>
+        public HtmlToPdfClient setHeaderWebPageHeight(int headerWebPageHeight)
+        {
+            parameters["header_web_page_height"] = headerWebPageHeight.ToString();
+            return this;
+        }
+
 
         /// <summary>
         /// Control if a custom footer is displayed in the generated PDF document. The default value is False.
@@ -893,6 +916,30 @@ namespace SelectPdf.Api
         }
 
         /// <summary>
+        /// Set the width in pixels used by the converter's internal browser window during the conversion of the footer content. The default value is 1024px.
+        /// </summary>
+        /// <param name="footerWebPageWidth">Browser window width in pixels.</param>
+        /// <returns>Reference to the current object.</returns>
+        public HtmlToPdfClient setFooterWebPageWidth(int footerWebPageWidth)
+        {
+            parameters["footer_web_page_width"] = footerWebPageWidth.ToString();
+            return this;
+        }
+
+        /// <summary>
+        /// Set the height in pixels used by the converter's internal browser window during the conversion of the footer content. 
+        /// The default value is 0px and it means that the page height is automatically calculated by the converter.
+        /// </summary>
+        /// <param name="footerWebPageHeight">Browser window height in pixels. Set it to 0px to automatically calculate page height.</param>
+        /// <returns>Reference to the current object.</returns>
+        public HtmlToPdfClient setFooterWebPageHeight(int footerWebPageHeight)
+        {
+            parameters["footer_web_page_height"] = footerWebPageHeight.ToString();
+            return this;
+        }
+
+
+        /// <summary>
         /// Show page numbers. Default value is True.
         /// </summary>
         /// <remarks>Page numbers will be displayed in the footer of the PDF document.</remarks>
@@ -1002,7 +1049,7 @@ namespace SelectPdf.Api
         /// For example, the selector for all the H1 elements is "H1", the selector for all the elements with the CSS class name 'myclass' is "*.myclass" and 
         /// the selector for the elements with the id 'myid' is "*#myid". Read more about CSS selectors <a href="http://www.w3schools.com/cssref/css_selectors.asp" target="_blank">here</a>.
         /// </summary>
-        /// <param name="selectors">CSS selectors used to identify HTML elements.</param>
+        /// <param name="selectors">CSS selectors used to identify HTML elements, comma separated.</param>
         /// <returns>Reference to the current object.</returns>
         public HtmlToPdfClient setPdfBookmarksSelectors(string selectors)
         {
@@ -1015,7 +1062,7 @@ namespace SelectPdf.Api
         /// For example, the selector for all the H1 elements is "H1", the selector for all the elements with the CSS class name 'myclass' is "*.myclass" and 
         /// the selector for the elements with the id 'myid' is "*#myid". Read more about CSS selectors <a href="http://www.w3schools.com/cssref/css_selectors.asp" target="_blank">here</a>.
         /// </summary>
-        /// <param name="selectors">CSS selectors used to identify HTML elements.</param>
+        /// <param name="selectors">CSS selectors used to identify HTML elements, comma separated.</param>
         /// <returns>Reference to the current object.</returns>
         public HtmlToPdfClient setPdfHideElements(string selectors)
         {
@@ -1033,6 +1080,19 @@ namespace SelectPdf.Api
         public HtmlToPdfClient setPdfShowOnlyElementID(string elementID)
         {
             parameters["pdf_show_only_element_id"] = elementID;
+            return this;
+        }
+
+        /// <summary>
+        /// Get the locations of page elements from the conversion. The elements that will have their locations retrieved are defined using CSS selectors. 
+        /// For example, the selector for all the H1 elements is "H1", the selector for all the elements with the CSS class name 'myclass' is "*.myclass" and 
+        /// the selector for the elements with the id 'myid' is "*#myid". Read more about CSS selectors <a href="http://www.w3schools.com/cssref/css_selectors.asp" target="_blank">here</a>.
+        /// </summary>
+        /// <param name="selectors">CSS selectors used to identify HTML elements, comma separated.</param>
+        /// <returns>Reference to the current object.</returns>
+        public HtmlToPdfClient setPdfWebElementsSelectors(string selectors)
+        {
+            parameters["pdf_web_elements_selectors"] = selectors;
             return this;
         }
 
@@ -1119,6 +1179,24 @@ namespace SelectPdf.Api
         {
             parameters[parameterName] = parameterValue;
             return this;
+        }
+
+        /// <summary>
+        /// Get the number of pages of the PDF document resulted from the API call.
+        /// </summary>
+        /// <returns>Number of pages of the PDF document.</returns>
+        public int getNumberOfPage()
+        {
+            return numberOfPages;
+        }
+
+        /// <summary>
+        /// Get the locations of certain web elements. This is retrieved if pdf_web_elements_selectors parameter is set and elements were found to match the selectors.
+        /// </summary>
+        /// <returns>List of web elements locations.</returns>
+        public IList<WebElement> getWebElements()
+        {
+            return webElements;
         }
     }
 }
