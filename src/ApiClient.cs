@@ -80,7 +80,7 @@ namespace SelectPdf.Api
 
             foreach (KeyValuePair<string, string> parameter in parameters)
             {
-                sParameters += parameter.Key + "=" + Uri.EscapeDataString(parameter.Value) + "&";
+                sParameters += parameter.Key + "=" + EncodeString(parameter.Value) + "&";
             }
 
             return sParameters;
@@ -96,10 +96,33 @@ namespace SelectPdf.Api
 
             foreach (KeyValuePair<string, string> entry in dictionaryToSerialize)
             {
-                sString += entry.Key + "=" + Uri.EscapeDataString(entry.Value) + "&";
+                sString += entry.Key + "=" + EncodeString(entry.Value) + "&";
             }
 
             return sString;
+        }
+
+        /// <summary>
+        /// Custom encoding method, to overcome the size limitation of Uri.EscapeDataString.
+        /// </summary>
+        /// <param name="str">String to encode.</param>
+        /// <returns>Encoded string.</returns>
+        private string EncodeString(string str)
+        {
+            //maxLengthAllowed .NET < 4.5 = 32765;
+            //maxLengthAllowed .NET >= 4.5 = 65519;
+            int maxLengthAllowed = 32765;
+            StringBuilder sb = new StringBuilder();
+            int loops = str.Length / maxLengthAllowed;
+
+            for (int i = 0; i <= loops; i++)
+            {
+                sb.Append(Uri.EscapeDataString(i < loops
+                    ? str.Substring(maxLengthAllowed * i, maxLengthAllowed)
+                    : str.Substring(maxLengthAllowed * i)));
+            }
+
+            return sb.ToString();
         }
 
         /// <summary>
