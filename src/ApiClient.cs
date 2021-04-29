@@ -196,9 +196,19 @@ namespace SelectPdf.Api
                     } catch { }
 
                     // get web elements
-                    string base64EncodedWebElements = response.Headers["selectpdf-api-web-elements"]; // this is a base64 encoded serialized json
-                    if (!string.IsNullOrEmpty(base64EncodedWebElements))
+                    string base64EncodedWebElementsHeadersCount = response.Headers["selectpdf-api-web-elements-headers-count"];
+                    if (!string.IsNullOrEmpty(base64EncodedWebElementsHeadersCount))
                     {
+                        StringBuilder allHeaders = new StringBuilder();
+                        int headersCount = Convert.ToInt32(base64EncodedWebElementsHeadersCount);
+
+                        for (int i=1; i<=headersCount; i++)
+                        {
+                            allHeaders.Append(response.Headers["selectpdf-api-web-elements-header-" + i]);
+                        }
+
+                        string base64EncodedWebElements = allHeaders.ToString(); // this is a base64 encoded serialized json
+
                         // decode from base64
                         byte[] byteArray = Convert.FromBase64String(base64EncodedWebElements);
                         string webElementsJson = Encoding.UTF8.GetString(byteArray);
