@@ -151,6 +151,7 @@ namespace SelectPdf.Api
             request.Credentials = CredentialCache.DefaultCredentials;
             request.Timeout = 600000; //600,000ms=600s=10min
             request.ReadWriteTimeout = 600000; //600,000ms=600s=10min
+            request.MaximumResponseHeadersLength = -1; // unlimited
 
             // send headers
             foreach (KeyValuePair<string, string> header in headers)
