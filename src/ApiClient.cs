@@ -150,6 +150,7 @@ namespace SelectPdf.Api
             request.Method = "POST";
             request.Credentials = CredentialCache.DefaultCredentials;
             request.Timeout = 600000; //600,000ms=600s=10min
+            request.ReadWriteTimeout = 600000; //600,000ms=600s=10min
 
             // send headers
             foreach (KeyValuePair<string, string> header in headers)
@@ -248,7 +249,7 @@ namespace SelectPdf.Api
 
                 if (response == null)
                 {
-                    throw new ApiException("Could not get a response from the API endpoint: " + apiEndpoint);
+                    throw new ApiException(string.Format("Could not get a response from the API endpoint: {0}. Web Exception: {1}.", apiEndpoint, webEx.Message), webEx);
                 }
                 else
                 {
