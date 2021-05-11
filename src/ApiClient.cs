@@ -149,9 +149,9 @@ namespace SelectPdf.Api
             request.ContentType = "application/x-www-form-urlencoded";
             request.Method = "POST";
             request.Credentials = CredentialCache.DefaultCredentials;
-            request.Timeout = 600000; //600,000ms=600s=10min
-            request.ReadWriteTimeout = 600000; //600,000ms=600s=10min
-            request.MaximumResponseHeadersLength = -1; // unlimited
+            request.Timeout = 6000000; //6,000,000ms=6,000s=100min
+            request.ReadWriteTimeout = 6000000; //6,000,000ms=6,000s=100min
+            request.MaximumResponseHeadersLength = 102400; // size in Kilobytes = 100Mb = 100 * 1024 kb. cannot use -1 (unlimited) because it does not work on .NET Core and .NET 5.
 
             // send headers
             foreach (KeyValuePair<string, string> header in headers)
