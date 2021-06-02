@@ -20,14 +20,14 @@ Sign up for for free to get instant API access to SelectPdf [HTML to PDF API](ht
 
 ## Installation
 
-Download [selectpdf-api-dotnet-client-1.1.5.zip](https://github.com/selectpdf/selectpdf-api-dotnet-client/releases/download/1.1.5/selectpdf-api-dotnet-client-1.1.5.zip), unzip it and add a reference to SelectPdf.Api.dll to your project.
+Download [selectpdf-api-dotnet-client-1.2.0.zip](https://github.com/selectpdf/selectpdf-api-dotnet-client/releases/download/1.2.0/selectpdf-api-dotnet-client-1.2.0.zip), unzip it and add a reference to SelectPdf.Api.dll to your project.
 
 OR
 
 Install SelectPdf .NET Client for Online API via Nuget: [SelectPdf API on Nuget](https://www.nuget.org/packages/SelectPdf.Api/).
 
 ```
-Install-Package SelectPdf.Api -Version 1.1.5
+Install-Package SelectPdf.Api -Version 1.2.0
 ```
 
 OR
