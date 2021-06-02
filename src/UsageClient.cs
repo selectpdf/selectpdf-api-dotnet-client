@@ -142,5 +142,11 @@ namespace SelectPdf.Api
         [XmlElement("conversions")]
         public int Conversions { get; set; }
 
+        /// <summary>
+        /// Number of credits used.
+        /// </summary>
+        [XmlElement("credits")]
+        public int Credits { get; set; }
+
     }
 }
