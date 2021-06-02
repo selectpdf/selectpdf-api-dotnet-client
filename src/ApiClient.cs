@@ -20,6 +20,16 @@ namespace SelectPdf.Api
         protected string apiEndpoint = "https://selectpdf.com/api2/convert/";
 
         /// <summary>
+        /// API async jobs endpoint
+        /// </summary>
+        protected string apiAsyncEndpoint = "https://selectpdf.com/api2/asyncjob/";
+
+        /// <summary>
+        /// API web elements endpoint
+        /// </summary>
+        protected string apiWebElementsEndpoint = "https://selectpdf.com/api2/webelements/";
+
+        /// <summary>
         /// Parameters that will be sent to the API.
         /// </summary>
         protected Dictionary<string, string> parameters = new Dictionary<string, string>();
@@ -35,9 +45,33 @@ namespace SelectPdf.Api
         protected int numberOfPages = 0;
 
         /// <summary>
+        /// Job ID for asynchronous calls or for calls that require a second request.
+        /// </summary>
+        protected string jobId = string.Empty;
+
+        /// <summary>
         /// Web elements locations. This is retrieved if pdf_web_elements_selectors parameter is set and elements were found to match the selectors.
         /// </summary>
         protected IList<WebElement> webElements = null;
+
+        private const string MULTIPART_FORM_DATA_BOUNDARY = "------------SelectPdf_Api_Boundry_$";
+        private const string NEW_LINE = "\r\n";
+
+        /// <summary>
+        /// Ping interval in seconds for asynchronous calls. Default value is 3 seconds.
+        /// </summary>
+        public int AsyncCallsPingInterval
+        {
+            get; set;
+        }
+
+        /// <summary>
+        /// Maximum number of pings for asynchronous calls. Default value is 1,000 pings.
+        /// </summary>
+        public int AsyncCallsMaxPings
+        {
+            get; set;
+        }
 
         /// <summary>
         /// Constructor
@@ -46,6 +80,12 @@ namespace SelectPdf.Api
         {
             // Up to 8 concurrent connections by default
             System.Net.ServicePointManager.DefaultConnectionLimit = 8;
+
+            // Async calls ping internal
+            AsyncCallsPingInterval = 3;
+
+            // Maximum number of pings for async calls
+            AsyncCallsMaxPings = 1000;
         }
 
         /// <summary>
@@ -68,6 +108,24 @@ namespace SelectPdf.Api
         public void setApiEndpoint(string apiEndpoint)
         {
             this.apiEndpoint = apiEndpoint;
+        }
+
+        /// <summary>
+        /// Set a custom SelectPdf API endpoint for async jobs. Do not use this method unless advised by SelectPdf.
+        /// </summary>
+        /// <param name="apiAsyncEndpoint">API async jobs endpoint.</param>
+        public void setApiAsyncEndpoint(string apiAsyncEndpoint)
+        {
+            this.apiAsyncEndpoint = apiAsyncEndpoint;
+        }
+
+        /// <summary>
+        /// Set a custom SelectPdf API endpoint for web elements. Do not use this method unless advised by SelectPdf.
+        /// </summary>
+        /// <param name="apiWebElementsEndpoint">API web elements endpoint.</param>
+        public void setApiWebElementsEndpoint(string apiWebElementsEndpoint)
+        {
+            this.apiWebElementsEndpoint = apiWebElementsEndpoint;
         }
 
         /// <summary>
@@ -132,7 +190,10 @@ namespace SelectPdf.Api
         /// <returns>If output stream is not specified, return response as byte array.</returns>
         protected byte[] PerformPost(Stream outStream)
         {
+            // reset results
             numberOfPages = 0;
+            jobId = string.Empty;
+            webElements = null;
 
             // serialize parameters
             string serializedParameters = SerializeParameters();
@@ -197,7 +258,18 @@ namespace SelectPdf.Api
                         }
                     } catch { }
 
-                    // get web elements
+                    // get job id from the header
+                    try
+                    {
+                        if (!string.IsNullOrEmpty(response.Headers["selectpdf-api-jobid"]))
+                        {
+                            jobId = response.Headers["selectpdf-api-jobid"];
+                        }
+                    }
+                    catch { }
+
+                    /*
+                    // get web elements - they are now read with a separate api call
                     string base64EncodedWebElementsHeadersCount = response.Headers["selectpdf-api-web-elements-headers-count"];
                     if (!string.IsNullOrEmpty(base64EncodedWebElementsHeadersCount))
                     {
@@ -218,7 +290,154 @@ namespace SelectPdf.Api
                         // deserialize json
                         webElements = Newtonsoft.Json.JsonConvert.DeserializeObject<IList<WebElement>>(webElementsJson);
                     }
+                    */
 
+                    // Get the response stream with the content returned by the server
+                    using (Stream responseStream = response.GetResponseStream())
+                    {
+                        if (outStream != null)
+                        {
+                            BinaryCopyStream(responseStream, outStream);
+                            outStream.Position = 0;
+                            response.Close();
+                            return null;
+                        }
+
+                        using (MemoryStream output = new MemoryStream())
+                        {
+                            BinaryCopyStream(responseStream, output);
+                            response.Close();
+                            return output.ToArray();
+                        }
+                    }
+                }
+                else if (response.StatusCode == HttpStatusCode.Accepted)
+                {
+                    // request accepted (for asynchronous jobs)
+
+                    // get job id from the header
+                    try
+                    {
+                        if (!string.IsNullOrEmpty(response.Headers["selectpdf-api-jobid"]))
+                        {
+                            jobId = response.Headers["selectpdf-api-jobid"];
+                        }
+                    }
+                    catch { }
+
+                    response.Close();
+                    return null;
+                }
+                else
+                {
+                    // error - get error message
+                    int statusCode = (int)response.StatusCode;
+                    string message = response.StatusDescription;
+                    response.Close();
+
+                    throw new ApiException(string.Format("({0}) {1}", statusCode, message));
+                }
+            }
+            catch (WebException webEx)
+            {
+                // an error occurred
+                HttpWebResponse response = (HttpWebResponse)webEx.Response;
+
+                if (response == null)
+                {
+                    throw new ApiException(string.Format("Could not get a response from the API endpoint: {0}. Web Exception: {1}.", apiEndpoint, webEx.Message), webEx);
+                }
+                else
+                {
+                    Stream responseStream = response.GetResponseStream();
+
+                    // get details of the error message if available (text read!!!)
+                    StreamReader readStream = new StreamReader(responseStream);
+                    string message = readStream.ReadToEnd();
+                    responseStream.Close();
+
+                    int statusCode = (int)response.StatusCode;
+
+                    response.Close();
+
+                    //throw new ApiException(string.Format("({0}) {1} - {2}", response.StatusCode, response.StatusDescription, message), webEx);
+                    throw new ApiException(string.Format("({0}) {1}", statusCode, message), webEx);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Create a multipart/form-data POST request (that can handle file uploads).
+        /// </summary>
+        /// <param name="outStream">Output response to this stream, if specified.</param>
+        /// <returns>If output stream is not specified, return response as byte array.</returns>
+        protected byte[] PerformPost_V2(Stream outStream)
+        {
+            numberOfPages = 0;
+
+            // serialize parameters
+            byte[] byteData = EncodeMultipartFormData();
+
+            // create request
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(apiEndpoint);
+
+            if (request == null)
+            {
+                throw new ApiException("Could not establish a connection with the API endpoint: " + apiEndpoint);
+            }
+
+            request.ContentType = "multipart/form-data; boundary=" + MULTIPART_FORM_DATA_BOUNDARY;
+            request.ContentLength = byteData.Length;
+            request.Method = "POST";
+            request.Credentials = CredentialCache.DefaultCredentials;
+            request.Timeout = 600000; //600,000ms=600s=10min
+            request.ReadWriteTimeout = 600000; //600,000ms=600s=10min
+            request.MaximumResponseHeadersLength = -1; // unlimited
+
+            // send headers
+            foreach (KeyValuePair<string, string> header in headers)
+            {
+                if (WebHeaderCollection.IsRestricted(header.Key))
+                {
+                    if (header.Key.ToLower() == "accept")
+                    {
+                        request.Accept = header.Value;
+                    }
+                }
+                else
+                {
+                    string headerName = header.Key;
+                    string headerValue = header.Value;
+                    string encodedHeaderName;
+                    string encodedHeaderValue;
+
+                    HeaderNameValueEncode(headerName, headerValue, out encodedHeaderName, out encodedHeaderValue);
+                    request.Headers.Add(encodedHeaderName, encodedHeaderValue);
+                }
+            }
+
+            // POST parameters
+            Stream dataStream = request.GetRequestStream();
+            dataStream.Write(byteData, 0, byteData.Length);
+            dataStream.Flush();
+            dataStream.Close();
+
+            // GET response (if response code is not 200 OK, a WebException is raised)
+            try
+            {
+                HttpWebResponse response = (HttpWebResponse)request.GetResponse();
+
+                if (response.StatusCode == HttpStatusCode.OK)
+                {
+                    // get number of pages from the header
+                    try
+                    {
+                        if (!string.IsNullOrEmpty(response.Headers["selectpdf-api-pages"]))
+                        {
+                            numberOfPages = Convert.ToInt32(response.Headers["selectpdf-api-pages"]);
+                        }
+                    }
+                    catch { }
 
                     // Get the response stream with the content returned by the server
                     using (Stream responseStream = response.GetResponseStream())
@@ -267,6 +486,42 @@ namespace SelectPdf.Api
             }
         }
 
+        /// <summary>
+        /// Start an asynchronous job.
+        /// </summary>
+        /// <returns>Asynchronous job ID.</returns>
+        public string StartAsyncJob()
+        {
+            parameters["async"] = "True";
+            PerformPost(null);
+            return jobId;
+        }
+
+        private byte[] EncodeMultipartFormData()
+        {
+            MemoryStream data = new MemoryStream();
+            BinaryWriter writer = new BinaryWriter(data);
+
+            string sParameters = "";
+
+            foreach (KeyValuePair<string, string> parameter in parameters)
+            {
+                sParameters += "--" + MULTIPART_FORM_DATA_BOUNDARY + NEW_LINE;
+                sParameters += string.Format("Content-Disposition: form-data; name=\"{0}\"", parameter.Key) + NEW_LINE;
+                sParameters += NEW_LINE;
+                sParameters += parameter.Value + NEW_LINE;
+            }
+
+            writer.Write(Encoding.UTF8.GetBytes(sParameters));
+
+            // final boundary
+            sParameters = "--" + MULTIPART_FORM_DATA_BOUNDARY + "--" + NEW_LINE;
+            sParameters += NEW_LINE;
+
+            writer.Write(Encoding.UTF8.GetBytes(sParameters));
+            writer.Flush();
+            return data.ToArray();
+        }
 
         /// <summary>
         /// Binary read from Stream into a MemoryStream.

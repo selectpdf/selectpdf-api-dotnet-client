@@ -38,6 +38,9 @@ namespace SelectPdf.Api
                 throw new ApiException("Cannot convert local urls. SelectPdf online API can only convert publicly available urls.");
             }
             parameters["url"] = url;
+            parameters["html"] = string.Empty;
+            parameters["base_url"] = string.Empty;
+            parameters["async"] = "False";
 
             return PerformPost(null);
         }
@@ -59,6 +62,9 @@ namespace SelectPdf.Api
                 throw new ApiException("Cannot convert local urls. SelectPdf online API can only convert publicly available urls.");
             }
             parameters["url"] = url;
+            parameters["html"] = string.Empty;
+            parameters["base_url"] = string.Empty;
+            parameters["async"] = "False";
 
             PerformPost(stream);
         }
@@ -80,6 +86,9 @@ namespace SelectPdf.Api
                 throw new ApiException("Cannot convert local urls. SelectPdf online API can only convert publicly available urls.");
             }
             parameters["url"] = url;
+            parameters["html"] = string.Empty;
+            parameters["base_url"] = string.Empty;
+            parameters["async"] = "False";
 
             FileStream outputFile = new FileStream(filePath, FileMode.Create);
 
@@ -95,6 +104,90 @@ namespace SelectPdf.Api
                 throw;
             }
 
+        }
+
+        /// <summary>
+        /// Convert the specified url to PDF using an asynchronous call.
+        /// </summary>
+        /// <remarks>SelectPdf online API can convert http:// and https:// publicly available urls.</remarks>
+        /// <param name="url">Address of the web page being converted.</param>
+        /// <returns>Byte array containing the resulted PDF.</returns>
+        public byte[] convertUrlAsync(string url)
+        {
+            if (!url.StartsWith("http://", true, null) && !url.StartsWith("https://", true, null))
+            {
+                throw new ApiException("The supported protocols for the converted webpage are http:// and https://.");
+            }
+            if (url.StartsWith("http://localhost", true, null))
+            {
+                throw new ApiException("Cannot convert local urls. SelectPdf online API can only convert publicly available urls.");
+            }
+            parameters["url"] = url;
+            parameters["html"] = string.Empty;
+            parameters["base_url"] = string.Empty;
+
+            string JobID = StartAsyncJob();
+
+            if (string.IsNullOrEmpty(JobID))
+            {
+                throw new ApiException("An error occurred launching the asynchronous call.");
+            }
+
+            int noPings = 0;
+
+            do
+            {
+                noPings++;
+
+                // sleep for a few seconds before next ping
+                System.Threading.Thread.Sleep(AsyncCallsPingInterval * 1000);
+
+                AsyncJobClient asyncJobClient = new AsyncJobClient(parameters["key"], JobID);
+                asyncJobClient.setApiEndpoint(apiAsyncEndpoint);
+
+                byte[] result = asyncJobClient.getResult();
+
+                if (result != null)
+                {
+                    numberOfPages = asyncJobClient.getNumberOfPage();
+                    webElements = asyncJobClient.getWebElements();
+
+                    return result;
+                }
+
+            } while (noPings <= AsyncCallsMaxPings);
+
+            throw new ApiException("Asynchronous call did not finish in expected timeframe.");
+        }
+
+        /// <summary>
+        /// Convert the specified url to PDF with an asynchronous call and writes the resulted PDF to an output stream.
+        /// </summary>
+        /// <remarks>SelectPdf online API can convert http:// and https:// publicly available urls.</remarks>
+        /// <param name="url">Address of the web page being converted.</param>
+        /// <param name="stream">The output stream where the resulted PDF will be written.</param>
+        public void convertUrlToStreamAsync(string url, Stream stream)
+        {
+            byte[] result = convertUrlAsync(url);
+
+            BinaryCopyStream(new MemoryStream(result), stream);
+        }
+
+        /// <summary>
+        /// Convert the specified url to PDF with an asynchronous call and writes the resulted PDF to a local file.
+        /// </summary>
+        /// <remarks>SelectPdf online API can convert http:// and https:// publicly available urls.</remarks>
+        /// <param name="url">Address of the web page being converted.</param>
+        /// <param name="filePath">Local file including path if necessary.</param>
+        public void convertUrlToFileAsync(string url, string filePath)
+        {
+            byte[] result = convertUrlAsync(url);
+
+            using (FileStream outputFile = new FileStream(filePath, FileMode.Create))
+            {
+                BinaryCopyStream(new MemoryStream(result), outputFile);
+                outputFile.Close();
+            }
         }
 
         /// <summary>
@@ -115,6 +208,7 @@ namespace SelectPdf.Api
         /// <returns>Byte array containing the resulted PDF.</returns>
         public byte[] convertHtmlString(string htmlString, string baseUrl)
         {
+            parameters["url"] = string.Empty;
             parameters["html"] = htmlString;
 
             if (!string.IsNullOrEmpty(baseUrl))
@@ -143,6 +237,7 @@ namespace SelectPdf.Api
         /// <param name="stream">The output stream where the resulted PDF will be written.</param>
         public void convertHtmlStringToStream(string htmlString, string baseUrl, Stream stream)
         {
+            parameters["url"] = string.Empty;
             parameters["html"] = htmlString;
 
             if (!string.IsNullOrEmpty(baseUrl))
@@ -171,6 +266,7 @@ namespace SelectPdf.Api
         /// <param name="filePath">Local file including path if necessary.</param>
         public void convertHtmlStringToFile(string htmlString, string baseUrl, string filePath)
         {
+            parameters["url"] = string.Empty;
             parameters["html"] = htmlString;
 
             if (!string.IsNullOrEmpty(baseUrl))
@@ -190,6 +286,116 @@ namespace SelectPdf.Api
                 outputFile.Close();
                 File.Delete(filePath);
                 throw;
+            }
+        }
+
+        /// <summary>
+        /// Convert the specified HTML string to PDF with an asynchronous call.
+        /// </summary>
+        /// <param name="htmlString">HTML string with the content being converted.</param>
+        /// <returns>Byte array containing the resulted PDF.</returns>
+        public byte[] convertHtmlStringAsync(string htmlString)
+        {
+            return convertHtmlStringAsync(htmlString, string.Empty);
+        }
+
+        /// <summary>
+        /// Convert the specified HTML string to PDF with an asynchronous call. Use a base url to resolve relative paths to resources.
+        /// </summary>
+        /// <param name="htmlString">HTML string with the content being converted.</param>
+        /// <param name="baseUrl">Base url used to resolve relative paths to resources (css, images, javascript, etc). Must be a http:// or https:// publicly available url.</param>
+        /// <returns>Byte array containing the resulted PDF.</returns>
+        public byte[] convertHtmlStringAsync(string htmlString, string baseUrl)
+        {
+            parameters["url"] = string.Empty;
+            parameters["html"] = htmlString;
+
+            if (!string.IsNullOrEmpty(baseUrl))
+            {
+                parameters["base_url"] = baseUrl;
+            }
+
+            string JobID = StartAsyncJob();
+
+            if (string.IsNullOrEmpty(JobID))
+            {
+                throw new ApiException("An error occurred launching the asynchronous call.");
+            }
+
+            int noPings = 0;
+
+            do
+            {
+                noPings++;
+
+                // sleep for a few seconds before next ping
+                System.Threading.Thread.Sleep(AsyncCallsPingInterval * 1000);
+
+                AsyncJobClient asyncJobClient = new AsyncJobClient(parameters["key"], JobID);
+                asyncJobClient.setApiEndpoint(apiAsyncEndpoint);
+
+                byte[] result = asyncJobClient.getResult();
+
+                if (result != null)
+                {
+                    numberOfPages = asyncJobClient.getNumberOfPage();
+                    webElements = asyncJobClient.getWebElements();
+
+                    return result;
+                }
+
+            } while (noPings <= AsyncCallsMaxPings);
+
+            throw new ApiException("Asynchronous call did not finish in expected timeframe.");
+        }
+
+        /// <summary>
+        /// Convert the specified HTML string to PDF with an asynchronous call and writes the resulted PDF to an output stream.
+        /// </summary>
+        /// <param name="htmlString">HTML string with the content being converted.</param>
+        /// <param name="stream">The output stream where the resulted PDF will be written.</param>
+        public void convertHtmlStringToStreamAsync(string htmlString, Stream stream)
+        {
+            convertHtmlStringToStreamAsync(htmlString, string.Empty, stream);
+        }
+
+        /// <summary>
+        /// Convert the specified HTML string to PDF with an asynchronous call and writes the resulted PDF to an output stream. Use a base url to resolve relative paths to resources.
+        /// </summary>
+        /// <param name="htmlString">HTML string with the content being converted.</param>
+        /// <param name="baseUrl">Base url used to resolve relative paths to resources (css, images, javascript, etc). Must be a http:// or https:// publicly available url.</param>
+        /// <param name="stream">The output stream where the resulted PDF will be written.</param>
+        public void convertHtmlStringToStreamAsync(string htmlString, string baseUrl, Stream stream)
+        {
+            byte[] result = convertHtmlStringAsync(htmlString, baseUrl);
+
+            BinaryCopyStream(new MemoryStream(result), stream);
+        }
+
+        /// <summary>
+        /// Convert the specified HTML string to PDF with an asynchronous call and writes the resulted PDF to a local file.
+        /// </summary>
+        /// <param name="htmlString">HTML string with the content being converted.</param>
+        /// <param name="filePath">Local file including path if necessary.</param>
+        public void convertHtmlStringToFileAsync(string htmlString, string filePath)
+        {
+            convertHtmlStringToFileAsync(htmlString, string.Empty, filePath);
+        }
+
+        /// <summary>
+        /// Convert the specified HTML string to PDF with an asynchronous call and writes the resulted PDF to a local file. Use a base url to resolve relative paths to resources.
+        /// </summary>
+        /// <param name="htmlString">HTML string with the content being converted.</param>
+        /// <param name="baseUrl">Base url used to resolve relative paths to resources (css, images, javascript, etc). Must be a http:// or https:// publicly available url.</param>
+        /// <param name="filePath">Local file including path if necessary.</param>
+        public void convertHtmlStringToFileAsync(string htmlString, string baseUrl, string filePath)
+        {
+            byte[] result = convertHtmlStringAsync(htmlString, baseUrl);
+
+            using (FileStream outputFile = new FileStream(filePath, FileMode.Create))
+            {
+                BinaryCopyStream(new MemoryStream(result), outputFile);
+                outputFile.Close();
             }
         }
 
@@ -1196,6 +1402,10 @@ namespace SelectPdf.Api
         /// <returns>List of web elements locations.</returns>
         public IList<WebElement> getWebElements()
         {
+            WebElementsClient webElementsClient = new WebElementsClient(parameters["key"], jobId);
+            webElementsClient.setApiEndpoint(apiWebElementsEndpoint);
+
+            webElements = webElementsClient.getWebElements();
             return webElements;
         }
     }
