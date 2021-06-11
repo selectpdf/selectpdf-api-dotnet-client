@@ -34,6 +34,18 @@ namespace SelectPdf.Api
         /// </summary>
         A5,
         /// <summary>
+        /// A6 page size.
+        /// </summary>
+        A6,
+        /// <summary>
+        /// A7 page size.
+        /// </summary>
+        A7,
+        /// <summary>
+        /// A8 page size.
+        /// </summary>
+        A8,
+        /// <summary>
         /// Letter page size.
         /// </summary>
         Letter,
@@ -192,5 +204,34 @@ namespace SelectPdf.Api
         Manual
     }
 
+    /// <summary>
+    /// The output text layout (for pdf to text calls).
+    /// </summary>
+    public enum TextLayout
+    {
+        /// <summary>
+        /// The original layout of the text from the PDF document is preserved.
+        /// </summary>
+        Original,
+        /// <summary>
+        /// The text is produced in reading order.
+        /// </summary>
+        Reading
+    };
+
+    /// <summary>
+    /// The output format (for pdf to text calls).
+    /// </summary>
+    public enum OutputFormat
+    {
+        /// <summary>
+        /// Text.
+        /// </summary>
+        Text,
+        /// <summary>
+        /// HTML.
+        /// </summary>
+        Html
+    };
 
 }

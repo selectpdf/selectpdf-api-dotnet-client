@@ -595,7 +595,7 @@ namespace SelectPdf.Api
         }
 
         /// <summary>
-        /// Set the maximum amount of time (in seconds) that the convert will wait for the page to load. 
+        /// Set the maximum amount of time (in seconds) that the converter will wait for the page to load. 
         /// </summary>
         /// <remarks>
         /// This method is an alias for setNavigationTimeout. A timeout error is displayed when this time elapses. 
@@ -610,7 +610,7 @@ namespace SelectPdf.Api
         }
 
         /// <summary>
-        /// Set the maximum amount of time (in seconds) that the convert will wait for the page to load. 
+        /// Set the maximum amount of time (in seconds) that the converter will wait for the page to load. 
         /// </summary>
         /// <remarks>
         /// This method is an alias for setMaxLoadTime. A timeout error is displayed when this time elapses. 
