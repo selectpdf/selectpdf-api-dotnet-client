@@ -30,6 +30,7 @@ namespace SelectPdf.Api
         {
             parameters["async"] = "False";
             parameters["action"] = "Convert";
+            parameters["url"] = string.Empty;
 
             files.Clear();
             files["inputPdf"] = inputPdf;
@@ -69,6 +70,7 @@ namespace SelectPdf.Api
         public string getTextFromFileAsync(string inputPdf)
         {
             parameters["action"] = "Convert";
+            parameters["url"] = string.Empty;
 
             files.Clear();
             files["inputPdf"] = inputPdf;
@@ -163,6 +165,7 @@ namespace SelectPdf.Api
 
             parameters["async"] = "False";
             parameters["action"] = "Search";
+            parameters["url"] = string.Empty;
             parameters["search_text"] = textToSearch;
             parameters["case_sensitive"] = caseSensitive.ToString();
             parameters["whole_words_only"] = wholeWordsOnly.ToString();
@@ -224,6 +227,7 @@ namespace SelectPdf.Api
             }
 
             parameters["action"] = "Search";
+            parameters["url"] = string.Empty;
             parameters["search_text"] = textToSearch;
             parameters["case_sensitive"] = caseSensitive.ToString();
             parameters["whole_words_only"] = wholeWordsOnly.ToString();
@@ -635,6 +639,18 @@ namespace SelectPdf.Api
         public PdfToTextClient setTimeout(int timeout)
         {
             parameters["timeout"] = timeout.ToString();
+            return this;
+        }
+
+        /// <summary>
+        /// Set a custom parameter. Do not use this method unless advised by SelectPdf.
+        /// </summary>
+        /// <param name="parameterName">Parameter name.</param>
+        /// <param name="parameterValue">Parameter value.</param>
+        /// <returns>Reference to the current object.</returns>
+        public PdfToTextClient setCustomParameter(string parameterName, string parameterValue)
+        {
+            parameters[parameterName] = parameterValue;
             return this;
         }
 
