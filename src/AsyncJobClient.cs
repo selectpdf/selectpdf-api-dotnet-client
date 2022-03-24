@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using System.IO;
+using System.Net;
 
 namespace SelectPdf.Api
 {
@@ -11,7 +12,7 @@ namespace SelectPdf.Api
     public class AsyncJobClient : ApiClient
     {
         /// <summary>
-        /// Construct the sync job client.
+        /// Construct the async job client.
         /// </summary>
         /// <param name="apiKey">API Key.</param>
         /// <param name="jobId">Job ID.</param>
@@ -47,7 +48,7 @@ namespace SelectPdf.Api
         /// Get the number of pages of the PDF document resulted from the API call.
         /// </summary>
         /// <returns>Number of pages of the PDF document.</returns>
-        public int getNumberOfPage()
+        public int getNumberOfPages()
         {
             return numberOfPages;
         }
@@ -61,5 +62,15 @@ namespace SelectPdf.Api
             return webElements;
         }
 
+        /// <summary>
+        /// Check if asynchronous job is finished.
+        /// </summary>
+        /// <returns>True if job finished.</returns>
+        public bool finished()
+        {
+            // If last HTTP status code received is 200 OK, the job is finished. 
+            // If last HTTP status code received is 202 Accepted, the job is still running. 
+            return this.lastHTTPCode == (int)HttpStatusCode.OK;
+        }
     }
 }
