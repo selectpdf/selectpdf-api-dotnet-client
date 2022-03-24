@@ -9,6 +9,59 @@ namespace SelectPdf.Api
     /// <summary>
     /// Get usage details for SelectPdf Online API.
     /// </summary>
+    /// <example>
+    /// Get usage details for SelectPdf online REST API:
+    /// <code language="cs">
+    /// using System;
+    /// using SelectPdf.Api;
+    /// 
+    /// namespace SelectPdf.Api.Tests
+    /// {
+    ///     class Program
+    ///     {
+    ///         static void Main(string[] args)
+    ///         {
+    ///             string apiKey = "Your API key here";
+    /// 
+    ///             Console.WriteLine("This is SelectPdf-{0}.", ApiClient.CLIENT_VERSION);
+    /// 
+    ///             try
+    ///             {
+    ///                 // get API usage
+    ///                 UsageClient usageClient = new UsageClient(apiKey);
+    ///                 UsageInformation usage = usageClient.getUsage(false);
+    ///                 Console.WriteLine("Conversions remained this month: {0}.", usage.Available);
+    ///             }
+    ///             catch (Exception ex)
+    ///             {
+    ///                 Console.WriteLine("An error occurred: " + ex.Message);
+    ///             }
+    ///         }
+    ///     }
+    /// }
+    /// </code>
+    /// <code language="vb">
+    /// Imports SelectPdf.Api
+    /// 
+    /// Module Program
+    ///     Sub Main(args As String())
+    ///         Dim apiKey As String = "Your API key here"
+    /// 
+    ///         Console.WriteLine("This is SelectPdf-{0}.", ApiClient.CLIENT_VERSION)
+    /// 
+    ///         Try
+    ///             ' get API usage
+    ///             Dim usageClient As UsageClient = New UsageClient(apiKey)
+    ///             Dim usage As UsageInformation = usageClient.getUsage(False)
+    ///             Console.WriteLine("Conversions remained this month: {0}.", usage.Available)
+    /// 
+    ///         Catch ex As Exception
+    ///             Console.WriteLine("An error occurred: " &amp; ex.Message)
+    ///         End Try
+    ///     End Sub
+    /// End Module
+    /// </code>
+    /// </example>
     public class UsageClient : ApiClient
     {
         /// <summary>
