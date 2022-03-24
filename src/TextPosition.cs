@@ -46,5 +46,14 @@ namespace SelectPdf.Api
 		/// Height of the text rectangle in the PDF page.
 		/// </summary>
 		public float Height { get; set; }
+
+		/// <summary>
+		/// ToString override.
+		/// </summary>
+		/// <returns>String representation of the object.</returns>
+		public override string ToString()
+        {
+			return string.Format("Page: {0} - [X: {1}, Y: {2}, Width: {3}, Height: {4}]", PageNumber, X, Y, Width, Height);
+        }
 	}
 }
