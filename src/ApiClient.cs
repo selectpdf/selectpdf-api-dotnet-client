@@ -63,12 +63,22 @@ namespace SelectPdf.Api
         protected string jobId = string.Empty;
 
         /// <summary>
+        /// Last HTTP Code
+        /// </summary>
+        protected int lastHTTPCode = 0;
+
+        /// <summary>
         /// Web elements locations. This is retrieved if pdf_web_elements_selectors parameter is set and elements were found to match the selectors.
         /// </summary>
         protected IList<WebElement> webElements = null;
 
         private const string MULTIPART_FORM_DATA_BOUNDARY = "------------SelectPdf_Api_Boundry_$";
         private const string NEW_LINE = "\r\n";
+
+        /// <summary>
+        /// Library version
+        /// </summary>
+        public static string CLIENT_VERSION = "1.4.0";
 
 #if NET_STANDARD_20
         private static readonly HttpClient staticHttpClient;
@@ -183,7 +193,7 @@ namespace SelectPdf.Api
         /// Serialize dictionary.
         /// </summary>
         /// <returns>Serialized dictionary.</returns>
-        protected string SerializeDictionary(Dictionary<string, string> dictionaryToSerialize)
+        public string SerializeDictionary(Dictionary<string, string> dictionaryToSerialize)
         {
             string sString = "";
 
@@ -225,10 +235,16 @@ namespace SelectPdf.Api
         /// <returns>If output stream is not specified, return response as byte array.</returns>
         protected byte[] PerformPost(Stream outStream)
         {
+            string platform = Environment.Version.ToString();
+            string version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
+
+            headers["selectpdf-api-client"] = string.Format("net-{0}-{1}", platform, version);
+
             // reset results
             numberOfPages = 0;
             jobId = string.Empty;
             webElements = null;
+            lastHTTPCode = 0;
 
             // serialize parameters
             string serializedParameters = SerializeParameters();
@@ -281,6 +297,8 @@ namespace SelectPdf.Api
             try
             {
                 HttpWebResponse response = (HttpWebResponse)request.GetResponse();
+                int statusCode = (int)response.StatusCode;
+                lastHTTPCode = statusCode;
 
                 if (response.StatusCode == HttpStatusCode.OK)
                 {
@@ -342,7 +360,6 @@ namespace SelectPdf.Api
                 else
                 {
                     // error - get error message
-                    int statusCode = (int)response.StatusCode;
                     string message = response.StatusDescription;
                     response.Close();
 
@@ -368,6 +385,7 @@ namespace SelectPdf.Api
                     responseStream.Close();
 
                     int statusCode = (int)response.StatusCode;
+                    lastHTTPCode = statusCode;
 
                     response.Close();
 
@@ -384,9 +402,16 @@ namespace SelectPdf.Api
         /// <returns>If output stream is not specified, return response as byte array.</returns>
         protected byte[] PerformPostAsMultipartFormData(Stream outStream)
         {
+            string platform = Environment.Version.ToString();
+            string version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
+
+            headers["selectpdf-api-client"] = string.Format("net-{0}-{1}", platform, version);
+
+            // reset results
             numberOfPages = 0;
             jobId = string.Empty;
             webElements = null;
+            lastHTTPCode = 0;
 
             // serialize parameters
             byte[] byteData = EncodeMultipartFormData();
@@ -439,6 +464,8 @@ namespace SelectPdf.Api
             try
             {
                 HttpWebResponse response = (HttpWebResponse)request.GetResponse();
+                int statusCode = (int)response.StatusCode;
+                lastHTTPCode = statusCode;
 
                 if (response.StatusCode == HttpStatusCode.OK)
                 {
@@ -501,7 +528,6 @@ namespace SelectPdf.Api
                 else
                 {
                     // error - get error message
-                    int statusCode = (int)response.StatusCode;
                     string message = response.StatusDescription;
                     response.Close();
 
@@ -527,6 +553,7 @@ namespace SelectPdf.Api
                     responseStream.Close();
 
                     int statusCode = (int)response.StatusCode;
+                    lastHTTPCode = statusCode;
 
                     response.Close();
 
@@ -683,7 +710,7 @@ namespace SelectPdf.Api
         }
 
         /// <summary>
-        /// Start an asynchronous job that requires multipart forma data.
+        /// Start an asynchronous job that requires multipart form data.
         /// </summary>
         /// <returns>Asynchronous job ID.</returns>
         public string StartAsyncJobMultipartFormData()
