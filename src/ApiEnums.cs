@@ -14,6 +14,10 @@ namespace SelectPdf.Api
         /// </summary>
         Custom,
         /// <summary>
+        /// A0 page size.
+        /// </summary>
+        A0,
+        /// <summary>
         /// A1 page size.
         /// </summary>
         A1,
