@@ -9,6 +9,156 @@ namespace SelectPdf.Api
     /// <summary>
     /// Html To Pdf Conversion with SelectPdf Online API.
     /// </summary>
+    /// <example>
+    /// Html to Pdf in .NET with SelectPdf online REST API:
+    /// <code language="cs">
+    /// using System;
+    /// using SelectPdf.Api;
+    /// 
+    /// namespace SelectPdf.Api.Tests
+    /// {
+    ///     class Program
+    ///     {
+    ///         static void Main(string[] args)
+    ///         {
+    ///             string url = "https://selectpdf.com";
+    ///             string localFile = "Test.pdf";
+    ///             string apiKey = "Your API key here";
+    /// 
+    ///             Console.WriteLine("This is SelectPdf-{0}.", ApiClient.CLIENT_VERSION);
+    /// 
+    ///             try
+    ///             {
+    ///                 HtmlToPdfClient client = new HtmlToPdfClient(apiKey);
+    /// 
+    ///                 // set parameters - see full list at https://selectpdf.com/html-to-pdf-api/
+    ///                 client
+    ///                     // main properties
+    /// 
+    ///                     .setPageSize(PageSize.A4) // PDF page size
+    ///                     .setPageOrientation(PageOrientation.Portrait) // PDF page orientation
+    ///                     .setMargins(0) // PDF page margins
+    ///                     .setRenderingEngine(RenderingEngine.WebKit) // rendering engine
+    ///                     .setConversionDelay(1) // conversion delay
+    ///                     .setNavigationTimeout(30) // navigation timeout 
+    ///                     .setShowPageNumbers(false) // page numbers
+    ///                     .setPageBreaksEnhancedAlgorithm(true) // enhanced page break algorithm
+    /// 
+    ///                     // additional properties
+    /// 
+    ///                     // .setUseCssPrint(true) // enable CSS media print
+    ///                     // .setDisableJavascript(true) // disable javascript
+    ///                     // .setDisableInternalLinks(true) // disable internal links
+    ///                     // .setDisableExternalLinks(true) // disable external links
+    ///                     // .setKeepImagesTogether(true) // keep images together
+    ///                     // .setScaleImages(true) // scale images to create smaller pdfs
+    ///                     // .setSinglePagePdf(true) // generate a single page PDF
+    ///                     // .setUserPassword("password") // secure the PDF with a password
+    /// 
+    ///                     // generate automatic bookmarks
+    /// 
+    ///                     // .setPdfBookmarksSelectors("H1, H2") // create outlines (bookmarks) for the specified elements
+    ///                     // .setViewerPageMode(PageMode.UseOutlines) // display outlines (bookmarks) in viewer
+    ///                 ;
+    /// 
+    ///                 Console.WriteLine("Starting conversion ...");
+    /// 
+    ///                 // convert url to file
+    ///                 client.convertUrlToFile(url, localFile);
+    /// 
+    ///                 // convert url to memory
+    ///                 // byte[] pdf = client.convertUrl(url);
+    /// 
+    ///                 // convert html string to file
+    ///                 // client.convertHtmlStringToFile("This is some <b>html</b>.", localFile);
+    /// 
+    ///                 // convert html string to memory
+    ///                 // byte[] pdf = client.convertHtmlString("This is some <b>html</b>.");
+    /// 
+    ///                 Console.WriteLine("Finished! Number of pages: {0}.", client.getNumberOfPages());
+    /// 
+    ///                 // get API usage
+    ///                 UsageClient usageClient = new UsageClient(apiKey);
+    ///                 UsageInformation usage = usageClient.getUsage(false);
+    ///                 Console.WriteLine("Conversions remained this month: {0}.", usage.Available);
+    ///             }
+    ///             catch (Exception ex)
+    ///             {
+    ///                 Console.WriteLine("An error occurred: " + ex.Message);
+    ///             }
+    ///         }
+    ///     }
+    /// }
+    /// </code>
+    /// <code language="vb">
+    /// Imports SelectPdf.Api
+    /// 
+    /// Module Program
+    ///     Sub Main(args As String())
+    ///         Dim url As String = "https://selectpdf.com"
+    ///         Dim localFile As String = "Test.pdf"
+    ///         Dim apiKey As String = "Your API key here"
+    /// 
+    ///         Console.WriteLine("This is SelectPdf-{0}.", ApiClient.CLIENT_VERSION)
+    /// 
+    ///         Try
+    ///             Dim client As HtmlToPdfClient = New HtmlToPdfClient(apiKey)
+    /// 
+    ///             ' set parameters - see full list at https://selectpdf.com/html-to-pdf-api/
+    /// 
+    ///             ' main properties
+    ///             client.setPageSize(PageSize.A4) ' PDF page size
+    ///             client.setPageOrientation(PageOrientation.Portrait) ' PDF page orientation
+    ///             client.setMargins(0) ' PDF page margins
+    ///             client.setRenderingEngine(RenderingEngine.WebKit) ' rendering engine
+    ///             client.setConversionDelay(1) ' conversion delay
+    ///             client.setNavigationTimeout(30) ' navigation timeout
+    ///             client.setShowPageNumbers(False) ' page numbers
+    ///             client.setPageBreaksEnhancedAlgorithm(True) ' enhanced page break algorithm
+    /// 
+    ///             ' additional properties
+    ///             ' client.setUseCssPrint(True) ' enable CSS media print
+    ///             ' client.setDisableJavascript(True) ' disable javascript
+    ///             ' client.setDisableInternalLinks(True) ' disable internal links
+    ///             ' client.setDisableExternalLinks(True) ' disable external links
+    ///             ' client.setKeepImagesTogether(True) ' keep images together
+    ///             ' client.setScaleImages(True) ' scale images To create smaller pdfs
+    ///             ' client.setSinglePagePdf(True) ' generate a Single page PDF
+    ///             ' client.setUserPassword("password") ' secure the PDF With a password
+    /// 
+    ///             ' generate automatic bookmarks
+    /// 
+    ///             ' client.setPdfBookmarksSelectors("H1, H2") ' create outlines (bookmarks) For the specified elements
+    ///             ' client.setViewerPageMode(PageMode.UseOutlines) ' display outlines (bookmarks) In viewer
+    /// 
+    ///             Console.WriteLine("Starting conversion ...")
+    /// 
+    ///             ' convert url to file
+    ///             client.convertUrlToFile(url, localFile)
+    /// 
+    ///             ' convert url to memory
+    ///             ' Dim pdf As Byte() = client.convertUrl(url)
+    /// 
+    ///             ' convert html string to file
+    ///             ' client.convertHtmlStringToFile("This is some <b>html</b>.", localFile)
+    /// 
+    ///             ' convert html string to memory
+    ///             ' Dim pdf As Byte() = client.convertHtmlString("This is some <b>html</b>.")
+    /// 
+    ///             Console.WriteLine("Finished! Number of pages: {0}.", client.getNumberOfPages())
+    /// 
+    ///             ' get API usage
+    ///             Dim usageClient As UsageClient = New UsageClient(apiKey)
+    ///             Dim usage As UsageInformation = usageClient.getUsage(False)
+    ///             Console.WriteLine("Conversions remained this month: {0}.", usage.Available)
+    /// 
+    ///         Catch ex As Exception
+    ///             Console.WriteLine("An error occurred: " &amp; ex.Message)
+    ///         End Try
+    ///     End Sub
+    /// End Module
+    /// </code>
+    /// </example>
     public class HtmlToPdfClient : ApiClient
     {
         /// <summary>
@@ -147,9 +297,9 @@ namespace SelectPdf.Api
 
                 byte[] result = asyncJobClient.getResult();
 
-                if (result != null)
+                if (asyncJobClient.finished())
                 {
-                    numberOfPages = asyncJobClient.getNumberOfPage();
+                    numberOfPages = asyncJobClient.getNumberOfPages();
                     webElements = asyncJobClient.getWebElements();
 
                     return result;
@@ -209,6 +359,7 @@ namespace SelectPdf.Api
         public byte[] convertHtmlString(string htmlString, string baseUrl)
         {
             parameters["url"] = string.Empty;
+            parameters["async"] = "False";
             parameters["html"] = htmlString;
 
             if (!string.IsNullOrEmpty(baseUrl))
@@ -238,6 +389,7 @@ namespace SelectPdf.Api
         public void convertHtmlStringToStream(string htmlString, string baseUrl, Stream stream)
         {
             parameters["url"] = string.Empty;
+            parameters["async"] = "False";
             parameters["html"] = htmlString;
 
             if (!string.IsNullOrEmpty(baseUrl))
@@ -267,6 +419,7 @@ namespace SelectPdf.Api
         public void convertHtmlStringToFile(string htmlString, string baseUrl, string filePath)
         {
             parameters["url"] = string.Empty;
+            parameters["async"] = "False";
             parameters["html"] = htmlString;
 
             if (!string.IsNullOrEmpty(baseUrl))
@@ -336,9 +489,9 @@ namespace SelectPdf.Api
 
                 byte[] result = asyncJobClient.getResult();
 
-                if (result != null)
+                if (asyncJobClient.finished())
                 {
-                    numberOfPages = asyncJobClient.getNumberOfPage();
+                    numberOfPages = asyncJobClient.getNumberOfPages();
                     webElements = asyncJobClient.getWebElements();
 
                     return result;
@@ -1391,7 +1544,7 @@ namespace SelectPdf.Api
         /// Get the number of pages of the PDF document resulted from the API call.
         /// </summary>
         /// <returns>Number of pages of the PDF document.</returns>
-        public int getNumberOfPage()
+        public int getNumberOfPages()
         {
             return numberOfPages;
         }

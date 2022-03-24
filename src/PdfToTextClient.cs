@@ -8,7 +8,218 @@ namespace SelectPdf.Api
     /// <summary>
     /// Pdf To Text Conversion with SelectPdf Online API.
     /// </summary>
-
+    /// <example>
+    /// Sample Code - Pdf To Text:
+    /// <code language="cs">
+    /// using System;
+    /// using SelectPdf.Api;
+    /// 
+    /// namespace SelectPdf.Api.Tests
+    /// {
+    ///     class Program
+    ///     {
+    ///         static void Main(string[] args)
+    ///         {
+    ///             string testUrl = "https://selectpdf.com/demo/files/selectpdf.pdf";
+    ///             string testPdf = "Input.pdf";
+    ///             string localFile = "Result.txt";
+    ///             string apiKey = "Your API key here";
+    /// 
+    ///             Console.WriteLine("This is SelectPdf-{0}.", ApiClient.CLIENT_VERSION);
+    /// 
+    ///             try
+    ///             {
+    ///                 PdfToTextClient client = new PdfToTextClient(apiKey);
+    /// 
+    ///                 // set parameters - see full list at https://selectpdf.com/pdf-to-text-api/
+    ///                 client
+    ///                     .setStartPage(1) // start page (processing starts from here)
+    ///                     .setEndPage(0) // end page (set 0 to process file til the end)
+    ///                     .setOutputFormat(OutputFormat.Text) // set output format (0-Text or 1-HTML)
+    ///                 ;
+    /// 
+    ///                 Console.WriteLine("Starting pdf to text ...");
+    /// 
+    ///                 // convert local pdf to local text file
+    ///                 client.getTextFromFileToFile(testPdf, localFile);
+    /// 
+    ///                 // extract text from local pdf to memory
+    ///                 // string text = client.getTextFromFile(testPdf);
+    ///                 // print text
+    ///                 // Console.WriteLine(text);
+    /// 
+    ///                 // convert pdf from public url to local text file
+    ///                 // client.getTextFromUrlToFile(testUrl, localFile);
+    /// 
+    ///                 // extract text from pdf from public url to memory
+    ///                 // string text = client.getTextFromUrl(testUrl);
+    ///                 // print text
+    ///                 // Console.WriteLine(text);
+    /// 
+    ///                 Console.WriteLine("Finished! Number of pages processed: {0}.", client.getNumberOfPages());
+    /// 
+    ///                 // get API usage
+    ///                 UsageClient usageClient = new UsageClient(apiKey);
+    ///                 UsageInformation usage = usageClient.getUsage(false);
+    ///                 Console.WriteLine("Conversions remained this month: {0}.", usage.Available);
+    ///             }
+    ///             catch (Exception ex)
+    ///             {
+    ///                 Console.WriteLine("An error occurred: " + ex.Message);
+    ///             }
+    ///         }
+    ///     }
+    /// }
+    /// </code>
+    /// <code language="vb">
+    /// Imports SelectPdf.Api
+    /// 
+    /// Module Program
+    ///     Sub Main(args As String())
+    ///         Dim testUrl As String = "https://selectpdf.com/demo/files/selectpdf.pdf"
+    ///         Dim testPdf As String = "Input.pdf"
+    ///         Dim localFile As String = "Result.txt"
+    ///         Dim apiKey As String = "Your API key here"
+    /// 
+    ///         Console.WriteLine("This is SelectPdf-{0}.", ApiClient.CLIENT_VERSION)
+    /// 
+    ///         Try
+    ///             Dim client As PdfToTextClient = New PdfToTextClient(apiKey)
+    /// 
+    ///             ' set parameters - see full list at https://selectpdf.com/pdf-to-text-api/
+    /// 
+    ///             client.setStartPage(1) ' start page (processing starts from here)
+    ///             client.setEndPage(0) ' End page (Set 0 To process file til the End)
+    ///             client.setOutputFormat(OutputFormat.Text) ' Set output format (0-Text Or 1-HTML)
+    /// 
+    ///             Console.WriteLine("Starting pdf to text ...")
+    /// 
+    ///             ' convert local pdf to local text file
+    ///             client.getTextFromFileToFile(testPdf, localFile)
+    /// 
+    ///             ' extract text from local pdf to memory
+    ///             ' Dim text As String = client.getTextFromFile(testPdf)
+    ///             ' print text
+    ///             ' Console.WriteLine(text)
+    /// 
+    ///             ' convert pdf from public url to local text file
+    ///             ' client.getTextFromUrlToFile(testUrl, localFile)
+    /// 
+    ///             ' extract text from pdf from public url to memory
+    ///             ' Dim text As String = client.getTextFromUrl(testUrl)
+    ///             ' print text
+    ///             ' Console.WriteLine(text)
+    /// 
+    ///             Console.WriteLine("Finished! Number of pages processed: {0}.", client.getNumberOfPages())
+    /// 
+    ///             ' get API usage
+    ///             Dim usageClient As UsageClient = New UsageClient(apiKey)
+    ///             Dim usage As UsageInformation = usageClient.getUsage(False)
+    ///             Console.WriteLine("Conversions remained this month: {0}.", usage.Available)
+    /// 
+    ///         Catch ex As Exception
+    ///             Console.WriteLine("An error occurred: " &amp; ex.Message)
+    ///         End Try
+    ///     End Sub
+    /// End Module
+    /// </code>
+    /// Sample Code - Search Pdf:
+    /// <code language="cs">
+    /// using System;
+    /// using SelectPdf.Api;
+    /// 
+    /// namespace SelectPdf.Api.Tests
+    /// {
+    ///     class Program
+    ///     {
+    ///         static void Main(string[] args)
+    ///         {
+    ///             string testUrl = "https://selectpdf.com/demo/files/selectpdf.pdf";
+    ///             string testPdf = "Input.pdf";
+    ///             string apiKey = "Your API key here";
+    /// 
+    ///             Console.WriteLine("This is SelectPdf-{0}.", ApiClient.CLIENT_VERSION);
+    /// 
+    ///             try
+    ///             {
+    ///                 PdfToTextClient client = new PdfToTextClient(apiKey);
+    /// 
+    ///                 // set parameters - see full list at https://selectpdf.com/pdf-to-text-api/
+    ///                 client
+    ///                     .setStartPage(1) // start page (processing starts from here)
+    ///                     .setEndPage(0) // end page (set 0 to process file til the end)
+    ///                     .setOutputFormat(OutputFormat.Text) // set output format (0-Text or 1-HTML)
+    ///                 ;
+    /// 
+    ///                 Console.WriteLine("Starting search pdf ...");
+    /// 
+    ///                 // search local pdf
+    ///                 IList&amp;TextPosition> results = client.searchFile(testPdf, "pdf");
+    /// 
+    ///                 // search pdf from public url
+    ///                 // IList&amp;TextPosition> results = client.searchUrl(testUrl, "pdf");
+    /// 
+    ///                 Console.WriteLine("Search results:\n{0}\nSearch results count: {1}.", string.Join("\n", results), results.Count);
+    /// 
+    ///                 Console.WriteLine("Finished! Number of pages processed: {0}.", client.getNumberOfPages());
+    /// 
+    ///                 // get API usage
+    ///                 UsageClient usageClient = new UsageClient(apiKey);
+    ///                 UsageInformation usage = usageClient.getUsage(false);
+    ///                 Console.WriteLine("Conversions remained this month: {0}.", usage.Available);
+    ///             }
+    ///             catch (Exception ex)
+    ///             {
+    ///                 Console.WriteLine("An error occurred: " + ex.Message);
+    ///             }
+    ///         }
+    ///     }
+    /// }
+    /// </code>
+    /// <code language="vb">
+    /// Imports SelectPdf.Api
+    /// 
+    /// Module Program
+    ///     Sub Main(args As String())
+    ///         Dim testUrl As String = "https://selectpdf.com/demo/files/selectpdf.pdf"
+    ///         Dim testPdf As String = "Input.pdf"
+    ///         Dim apiKey As String = "Your API key here"
+    /// 
+    ///         Console.WriteLine("This is SelectPdf-{0}.", ApiClient.CLIENT_VERSION)
+    /// 
+    ///         Try
+    ///             Dim client As PdfToTextClient = New PdfToTextClient(apiKey)
+    /// 
+    ///             ' set parameters - see full list at https://selectpdf.com/pdf-to-text-api/
+    /// 
+    ///             client.setStartPage(1) ' start page (processing starts from here)
+    ///             client.setEndPage(0) ' End page (Set 0 To process file til the End)
+    ///             client.setOutputFormat(OutputFormat.Text) ' Set output format (0-Text Or 1-HTML)
+    /// 
+    ///             Console.WriteLine("Starting search pdf ...")
+    /// 
+    ///             ' search local pdf
+    ///             Dim results As IList(Of TextPosition) = client.searchFile(testPdf, "pdf")
+    /// 
+    ///             ' search pdf from public url
+    ///             ' Dim results As IList(Of TextPosition) = client.searchUrl(testUrl, "pdf")
+    /// 
+    ///             Console.WriteLine("Search results:{0}{1}{0}Search results count: {2}.", Environment.NewLine, String.Join(Environment.NewLine, results), results.Count)
+    /// 
+    ///             Console.WriteLine("Finished! Number of pages processed: {0}.", client.getNumberOfPages())
+    /// 
+    ///             ' get API usage
+    ///             Dim usageClient As UsageClient = New UsageClient(apiKey)
+    ///             Dim usage As UsageInformation = usageClient.getUsage(False)
+    ///             Console.WriteLine("Conversions remained this month: {0}.", usage.Available)
+    /// 
+    ///         Catch ex As Exception
+    ///             Console.WriteLine("An error occurred: " &amp; ex.Message)
+    ///         End Try
+    ///     End Sub
+    /// End Module
+    /// </code>
+    /// </example>
     public class PdfToTextClient : ApiClient
     {
         /// <summary>
@@ -96,9 +307,9 @@ namespace SelectPdf.Api
 
                 byte[] result = asyncJobClient.getResult();
 
-                if (result != null)
+                if (asyncJobClient.finished())
                 {
-                    numberOfPages = asyncJobClient.getNumberOfPage();
+                    numberOfPages = asyncJobClient.getNumberOfPages();
 
                     return Encoding.UTF8.GetString(result);
                 }
@@ -235,6 +446,8 @@ namespace SelectPdf.Api
             files.Clear();
             files["inputPdf"] = inputPdf;
 
+            headers["Accept"] = "application/json";
+
             string JobID = StartAsyncJobMultipartFormData();
 
             if (string.IsNullOrEmpty(JobID))
@@ -256,9 +469,9 @@ namespace SelectPdf.Api
 
                 byte[] result = asyncJobClient.getResult();
 
-                if (result != null)
+                if (asyncJobClient.finished())
                 {
-                    numberOfPages = asyncJobClient.getNumberOfPage();
+                    numberOfPages = asyncJobClient.getNumberOfPages();
 
                     try
                     {
@@ -314,7 +527,7 @@ namespace SelectPdf.Api
             }
             if (url.StartsWith("http://localhost", true, null))
             {
-                throw new ApiException("Cannot convert local urls via this method. Use getTextFromFile instead.");
+                throw new ApiException("Cannot convert local urls via this method. Use searchFile instead.");
             }
 
             if (string.IsNullOrEmpty(textToSearch))
@@ -385,7 +598,7 @@ namespace SelectPdf.Api
             }
             if (url.StartsWith("http://localhost", true, null))
             {
-                throw new ApiException("Cannot convert local urls via this method. Use getTextFromFile instead.");
+                throw new ApiException("Cannot convert local urls via this method. Use searchFile instead.");
             }
 
             if (string.IsNullOrEmpty(textToSearch))
@@ -422,9 +635,9 @@ namespace SelectPdf.Api
 
                 byte[] result = asyncJobClient.getResult();
 
-                if (result != null)
+                if (asyncJobClient.finished())
                 {
-                    numberOfPages = asyncJobClient.getNumberOfPage();
+                    numberOfPages = asyncJobClient.getNumberOfPages();
 
                     try
                     {
@@ -538,9 +751,9 @@ namespace SelectPdf.Api
 
                 byte[] result = asyncJobClient.getResult();
 
-                if (result != null)
+                if (asyncJobClient.finished())
                 {
-                    numberOfPages = asyncJobClient.getNumberOfPage();
+                    numberOfPages = asyncJobClient.getNumberOfPages();
 
                     return Encoding.UTF8.GetString(result);
                 }
@@ -658,7 +871,7 @@ namespace SelectPdf.Api
         /// Get the number of pages processed from the PDF document.
         /// </summary>
         /// <returns>Number of pages processed from the PDF document.</returns>
-        public int getNumberOfPage()
+        public int getNumberOfPages()
         {
             return numberOfPages;
         }
