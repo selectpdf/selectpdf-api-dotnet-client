@@ -11,7 +11,7 @@ namespace SelectPdf.Api
     public class WebElementsClient : ApiClient
     {
         /// <summary>
-        /// Construct the sync job client.
+        /// Construct the web elements client.
         /// </summary>
         /// <param name="apiKey">API Key.</param>
         /// <param name="jobId">Job ID.</param>
