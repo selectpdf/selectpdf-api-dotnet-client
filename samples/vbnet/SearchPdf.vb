@@ -1,4 +1,4 @@
-﻿Imports System
+Imports System
 Imports System.Collections.Generic
 Imports SelectPdf.Api
 
@@ -6,6 +6,8 @@ Public Class SearchPdf
     Public Shared Sub RunTest()
         Dim testUrl As String = "https://selectpdf.com/demo/files/selectpdf.pdf"
         Dim testPdf As String = "Input.pdf"
+
+        ' SearchPdf is exposed by PdfToTextClient and requires an API key.
         Dim apiKey As String = "Your API key here"
 
         Console.WriteLine("This is SelectPdf-{0}.", ApiClient.CLIENT_VERSION)
@@ -21,21 +23,27 @@ Public Class SearchPdf
 
             Console.WriteLine("Starting search pdf ...")
 
-            ' search local pdf
-            Dim results As IList(Of TextPosition) = client.searchFile(testPdf, "pdf")
-
             ' search pdf from public url
-            ' Dim results As IList(Of TextPosition) = client.searchUrl(testUrl, "pdf")
+            Dim results As IList(Of TextPosition) = client.searchUrl(testUrl, "pdf")
+
+            ' search local pdf
+            ' Dim results As IList(Of TextPosition) = client.searchFile(testPdf, "pdf")
 
             Console.WriteLine("Search results:{0}{1}{0}Search results count: {2}.", Environment.NewLine, String.Join(Environment.NewLine, results), results.Count)
 
             Console.WriteLine("Finished! Number of pages processed: {0}.", client.getNumberOfPages())
+
+            ' response telemetry (SDK 1.5.0)
+            Console.WriteLine("Mode: {0}, Execution: {1}.", client.Mode, client.ExecutionMode)
+            Console.WriteLine("Credits remaining: {0} / {1}.", client.CreditsRemaining, client.CreditsTotal)
 
             ' get API usage
             Dim usageClient As UsageClient = New UsageClient(apiKey)
             Dim usage As UsageInformation = usageClient.getUsage(False)
             Console.WriteLine("Conversions remained this month: {0}.", usage.Available)
 
+        Catch ex As ApiException
+            Console.WriteLine("API error: {0}", ex.Message)
         Catch ex As Exception
             Console.WriteLine("An error occurred: " & ex.Message)
         End Try

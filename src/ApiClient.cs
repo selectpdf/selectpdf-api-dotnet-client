@@ -68,6 +68,61 @@ namespace SelectPdf.Api
         protected int lastHTTPCode = 0;
 
         /// <summary>
+        /// Subscription monthly conversion limit, parsed from X-SelectPdf-Credits-Total.
+        /// -1 indicates unlimited (Dedicated tier). Null when the header is absent
+        /// (e.g. demo endpoint, error responses, older server versions).
+        /// </summary>
+        protected int? creditsTotal = null;
+
+        /// <summary>
+        /// Conversions remaining in the current month, parsed from
+        /// X-SelectPdf-Credits-Remaining. -1 for unlimited subscriptions.
+        /// Null when the header is absent.
+        /// </summary>
+        protected int? creditsRemaining = null;
+
+        /// <summary>
+        /// Subscription monthly conversion limit reported by the server.
+        /// -1 = unlimited (Dedicated tier). Null = the most recent response did
+        /// not include credit info (e.g. demo endpoint, error response).
+        /// </summary>
+        public int? CreditsTotal { get { return creditsTotal; } }
+
+        /// <summary>
+        /// Conversions remaining in the current month reported by the server.
+        /// -1 = unlimited (Dedicated tier). Null = the most recent response did
+        /// not include credit info.
+        /// </summary>
+        public int? CreditsRemaining { get { return creditsRemaining; } }
+
+        /// <summary>
+        /// Endpoint mode of the most recent response, parsed from X-SelectPdf-Mode.
+        /// "production" or "demo". Empty string when the header is absent (older server).
+        /// </summary>
+        protected string mode = string.Empty;
+
+        /// <summary>
+        /// Server-side execution path of the most recent response, parsed from
+        /// X-SelectPdf-Execution. "in-process" or "worker". Empty string when absent.
+        /// </summary>
+        protected string executionMode = string.Empty;
+
+        /// <summary>
+        /// Endpoint mode of the most recent response: "production" or "demo".
+        /// Empty when the response did not include the X-SelectPdf-Mode header
+        /// (older server, or non-conversion endpoint).
+        /// </summary>
+        public string Mode { get { return mode; } }
+
+        /// <summary>
+        /// Server-side execution path of the most recent conversion: "in-process"
+        /// (engine ran inside the IIS worker process) or "worker" (engine ran in
+        /// a separate SelectPdf.Worker.Local.exe / Worker.Remote.exe process).
+        /// Empty for endpoints that don't perform a conversion (e.g. Usage, WebElements).
+        /// </summary>
+        public string ExecutionMode { get { return executionMode; } }
+
+        /// <summary>
         /// Web elements locations. This is retrieved if pdf_web_elements_selectors parameter is set and elements were found to match the selectors.
         /// </summary>
         protected IList<WebElement> webElements = null;
@@ -78,7 +133,7 @@ namespace SelectPdf.Api
         /// <summary>
         /// Library version
         /// </summary>
-        public static string CLIENT_VERSION = "1.4.0";
+        public static string CLIENT_VERSION = "1.5.0";
 
 #if NET_STANDARD_20
         private static readonly HttpClient staticHttpClient;
@@ -154,6 +209,34 @@ namespace SelectPdf.Api
         {
             this.apiEndpoint = apiEndpoint;
         }
+
+        /// <summary>
+        /// Hook called after a successful response, with raw response headers.
+        /// Subclasses can override to capture endpoint-specific headers (e.g. demo headers).
+        /// Default implementation is a no-op.
+        /// Used on the WebRequest code path (legacy and most TFMs).
+        /// </summary>
+        /// <param name="headers">Raw HTTP response headers.</param>
+        protected virtual void OnResponseHeadersReceived(WebHeaderCollection headers)
+        {
+        }
+
+#if NET_STANDARD_20
+        /// <summary>
+        /// HttpClient variant of <see cref="OnResponseHeadersReceived(WebHeaderCollection)"/>.
+        /// Both the response message headers and the content headers are passed
+        /// in because HttpClient splits them across two collections (and the
+        /// SelectPdf demo headers land on the content-headers side). Subclasses
+        /// that need demo-style headers should override this when targeting
+        /// .NET Standard 2.0 / .NET Core in addition to the WebRequest hook.
+        /// Default implementation is a no-op.
+        /// </summary>
+        protected virtual void OnResponseHeadersReceivedHttpClient(
+            System.Net.Http.Headers.HttpResponseHeaders headers,
+            System.Net.Http.Headers.HttpContentHeaders contentHeaders)
+        {
+        }
+#endif
 
         /// <summary>
         /// Set a custom SelectPdf API endpoint for async jobs. Do not use this method unless advised by SelectPdf.
@@ -245,6 +328,10 @@ namespace SelectPdf.Api
             jobId = string.Empty;
             webElements = null;
             lastHTTPCode = 0;
+            creditsTotal = null;
+            creditsRemaining = null;
+            mode = string.Empty;
+            executionMode = string.Empty;
 
             // serialize parameters
             string serializedParameters = SerializeParameters();
@@ -302,24 +389,9 @@ namespace SelectPdf.Api
 
                 if (response.StatusCode == HttpStatusCode.OK)
                 {
-                    // get number of pages from the header
-                    try
-                    {
-                        if (!string.IsNullOrEmpty(response.Headers["selectpdf-api-pages"]))
-                        {
-                            numberOfPages = Convert.ToInt32(response.Headers["selectpdf-api-pages"]);
-                        }
-                    } catch { }
+                    ReadStandardResponseHeaders(response.Headers);
 
-                    // get job id from the header
-                    try
-                    {
-                        if (!string.IsNullOrEmpty(response.Headers["selectpdf-api-jobid"]))
-                        {
-                            jobId = response.Headers["selectpdf-api-jobid"];
-                        }
-                    }
-                    catch { }
+                    try { OnResponseHeadersReceived(response.Headers); } catch { }
 
                     // Get the response stream with the content returned by the server
                     using (Stream responseStream = response.GetResponseStream())
@@ -343,16 +415,8 @@ namespace SelectPdf.Api
                 else if (response.StatusCode == HttpStatusCode.Accepted)
                 {
                     // request accepted (for asynchronous jobs)
-
-                    // get job id from the header
-                    try
-                    {
-                        if (!string.IsNullOrEmpty(response.Headers["selectpdf-api-jobid"]))
-                        {
-                            jobId = response.Headers["selectpdf-api-jobid"];
-                        }
-                    }
-                    catch { }
+                    ReadStandardResponseHeaders(response.Headers);
+                    try { OnResponseHeadersReceived(response.Headers); } catch { }
 
                     response.Close();
                     return null;
@@ -387,7 +451,18 @@ namespace SelectPdf.Api
                     int statusCode = (int)response.StatusCode;
                     lastHTTPCode = statusCode;
 
+                    string contentType = response.ContentType ?? string.Empty;
+                    var responseHeaders = response.Headers;
+
                     response.Close();
+
+                    // Demo endpoint returns JSON error bodies for 400 / 413 / 429 / 503.
+                    // Parse those into typed exceptions so callers can react programmatically.
+                    if (contentType.IndexOf("application/json", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        ApiException demoEx = TryBuildDemoException(statusCode, message, responseHeaders, webEx);
+                        if (demoEx != null) throw demoEx;
+                    }
 
                     //throw new ApiException(string.Format("({0}) {1} - {2}", response.StatusCode, response.StatusDescription, message), webEx);
                     throw new ApiException(string.Format("({0}) {1}", statusCode, message), webEx);
@@ -412,6 +487,10 @@ namespace SelectPdf.Api
             jobId = string.Empty;
             webElements = null;
             lastHTTPCode = 0;
+            creditsTotal = null;
+            creditsRemaining = null;
+            mode = string.Empty;
+            executionMode = string.Empty;
 
             // serialize parameters
             byte[] byteData = EncodeMultipartFormData();
@@ -469,25 +548,8 @@ namespace SelectPdf.Api
 
                 if (response.StatusCode == HttpStatusCode.OK)
                 {
-                    // get number of pages from the header
-                    try
-                    {
-                        if (!string.IsNullOrEmpty(response.Headers["selectpdf-api-pages"]))
-                        {
-                            numberOfPages = Convert.ToInt32(response.Headers["selectpdf-api-pages"]);
-                        }
-                    }
-                    catch { }
-
-                    // get job id from the header
-                    try
-                    {
-                        if (!string.IsNullOrEmpty(response.Headers["selectpdf-api-jobid"]))
-                        {
-                            jobId = response.Headers["selectpdf-api-jobid"];
-                        }
-                    }
-                    catch { }
+                    ReadStandardResponseHeaders(response.Headers);
+                    try { OnResponseHeadersReceived(response.Headers); } catch { }
 
                     // Get the response stream with the content returned by the server
                     using (Stream responseStream = response.GetResponseStream())
@@ -511,16 +573,8 @@ namespace SelectPdf.Api
                 else if (response.StatusCode == HttpStatusCode.Accepted)
                 {
                     // request accepted (for asynchronous jobs)
-
-                    // get job id from the header
-                    try
-                    {
-                        if (!string.IsNullOrEmpty(response.Headers["selectpdf-api-jobid"]))
-                        {
-                            jobId = response.Headers["selectpdf-api-jobid"];
-                        }
-                    }
-                    catch { }
+                    ReadStandardResponseHeaders(response.Headers);
+                    try { OnResponseHeadersReceived(response.Headers); } catch { }
 
                     response.Close();
                     return null;
@@ -555,7 +609,18 @@ namespace SelectPdf.Api
                     int statusCode = (int)response.StatusCode;
                     lastHTTPCode = statusCode;
 
+                    string contentType = response.ContentType ?? string.Empty;
+                    var responseHeaders = response.Headers;
+
                     response.Close();
+
+                    // Demo endpoint returns JSON error bodies for 400 / 413 / 429 / 503.
+                    // Parse those into typed exceptions so callers can react programmatically.
+                    if (contentType.IndexOf("application/json", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        ApiException demoEx = TryBuildDemoException(statusCode, message, responseHeaders, webEx);
+                        if (demoEx != null) throw demoEx;
+                    }
 
                     //throw new ApiException(string.Format("({0}) {1} - {2}", response.StatusCode, response.StatusDescription, message), webEx);
                     throw new ApiException(string.Format("({0}) {1}", statusCode, message), webEx);
@@ -602,19 +667,9 @@ namespace SelectPdf.Api
             {
                 if (response.StatusCode == HttpStatusCode.OK)
                 {
-                    IEnumerable<string> values;
-
-                    // get number of pages from the header
-                    if (response.Headers.TryGetValues("selectpdf-api-pages", out values))
-                    {
-                        numberOfPages = int.Parse(values.First());
-                    }
-
-                    // get job id from the header
-                    if (response.Headers.TryGetValues("selectpdf-api-jobid", out values))
-                    {
-                        jobId = values.First();
-                    }
+                    var contentHeaders = response.Content != null ? response.Content.Headers : null;
+                    ReadStandardResponseHeadersHttpClient(response.Headers, contentHeaders);
+                    try { OnResponseHeadersReceivedHttpClient(response.Headers, contentHeaders); } catch { }
 
                     if (outStream != null)
                     {
@@ -628,15 +683,9 @@ namespace SelectPdf.Api
                 else if (response.StatusCode == HttpStatusCode.Accepted)
                 {
                     // request accepted (for asynchronous jobs)
-
-                    IEnumerable<string> values;
-
-                    // get job id from the header
-                    if (response.Headers.TryGetValues("selectpdf-api-jobid", out values))
-                    {
-                        jobId = values.First();
-                    }
-
+                    var contentHeaders = response.Content != null ? response.Content.Headers : null;
+                    ReadStandardResponseHeadersHttpClient(response.Headers, contentHeaders);
+                    try { OnResponseHeadersReceivedHttpClient(response.Headers, contentHeaders); } catch { }
                     return null;
                 }
                 else
@@ -654,6 +703,15 @@ namespace SelectPdf.Api
                     if (!string.IsNullOrEmpty(responseBody))
                     {
                         message = responseBody;
+                    }
+
+                    string contentType = response.Content.Headers.ContentType != null
+                        ? response.Content.Headers.ContentType.MediaType
+                        : string.Empty;
+                    if (contentType.IndexOf("application/json", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        ApiException demoEx = TryBuildDemoExceptionFromHttpClient(statusCode, message, response.Headers, response.Content.Headers);
+                        if (demoEx != null) throw demoEx;
                     }
 
                     throw new ApiException(string.Format("({0}) {1}", statusCode, message));
@@ -857,5 +915,200 @@ namespace SelectPdf.Api
             return input;
         }
 
+        // --- standard response header readers ---------------------------------------
+        // The SDK reads only the new X-SelectPdf-* header form. Older clients that
+        // depend on the legacy lowercase form continue to work because the server
+        // still emits both, but new SDK code should never read the legacy form.
+
+        private void ReadStandardResponseHeaders(System.Net.WebHeaderCollection headers)
+        {
+            if (headers == null) return;
+
+            try
+            {
+                string pages = headers["X-SelectPdf-Pages"];
+                if (!string.IsNullOrEmpty(pages))
+                    numberOfPages = Convert.ToInt32(pages);
+            }
+            catch { }
+
+            try
+            {
+                string jid = headers["X-SelectPdf-Job-Id"];
+                if (!string.IsNullOrEmpty(jid)) jobId = jid;
+            }
+            catch { }
+
+            try
+            {
+                string total = headers["X-SelectPdf-Credits-Total"];
+                int v;
+                if (!string.IsNullOrEmpty(total) && int.TryParse(total, out v)) creditsTotal = v;
+            }
+            catch { }
+
+            try
+            {
+                string remaining = headers["X-SelectPdf-Credits-Remaining"];
+                int v;
+                if (!string.IsNullOrEmpty(remaining) && int.TryParse(remaining, out v)) creditsRemaining = v;
+            }
+            catch { }
+
+            try
+            {
+                string m = headers["X-SelectPdf-Mode"];
+                if (!string.IsNullOrEmpty(m)) mode = m;
+            }
+            catch { }
+
+            try
+            {
+                string e = headers["X-SelectPdf-Execution"];
+                if (!string.IsNullOrEmpty(e)) executionMode = e;
+            }
+            catch { }
+        }
+
+#if NET_STANDARD_20
+        // The SelectPdf server adds all X-SelectPdf-* headers to response.Content.Headers
+        // (see SelectPdf/AppCode/ApiResponseHeaders.cs). HttpClient exposes these on a
+        // separate HttpContentHeaders collection, distinct from response.Headers — so
+        // both must be checked. Earlier revisions of this method only consulted
+        // response.Headers and missed every standard header on the HttpClient path.
+        private void ReadStandardResponseHeadersHttpClient(
+            System.Net.Http.Headers.HttpResponseHeaders headers,
+            System.Net.Http.Headers.HttpContentHeaders contentHeaders)
+        {
+            string s;
+
+            s = TryGetHeader(headers, contentHeaders, "X-SelectPdf-Pages");
+            int pages;
+            if (!string.IsNullOrEmpty(s) && int.TryParse(s, out pages)) numberOfPages = pages;
+
+            s = TryGetHeader(headers, contentHeaders, "X-SelectPdf-Job-Id");
+            if (!string.IsNullOrEmpty(s)) jobId = s;
+
+            s = TryGetHeader(headers, contentHeaders, "X-SelectPdf-Credits-Total");
+            int total;
+            if (!string.IsNullOrEmpty(s) && int.TryParse(s, out total)) creditsTotal = total;
+
+            s = TryGetHeader(headers, contentHeaders, "X-SelectPdf-Credits-Remaining");
+            int remaining;
+            if (!string.IsNullOrEmpty(s) && int.TryParse(s, out remaining)) creditsRemaining = remaining;
+
+            s = TryGetHeader(headers, contentHeaders, "X-SelectPdf-Mode");
+            if (!string.IsNullOrEmpty(s)) mode = s;
+
+            s = TryGetHeader(headers, contentHeaders, "X-SelectPdf-Execution");
+            if (!string.IsNullOrEmpty(s)) executionMode = s;
+        }
+
+        private static string TryGetHeader(
+            System.Net.Http.Headers.HttpResponseHeaders headers,
+            System.Net.Http.Headers.HttpContentHeaders contentHeaders,
+            string name)
+        {
+            IEnumerable<string> values;
+            if (contentHeaders != null && contentHeaders.TryGetValues(name, out values))
+                return values.First();
+            if (headers != null && headers.TryGetValues(name, out values))
+                return values.First();
+            return null;
+        }
+#endif
+
+        // --- demo endpoint JSON-error helpers ---------------------------------------
+        // The demo endpoint returns structured JSON for 400 / 413 / 429 / 503 errors:
+        //   {"error":"rate_limited","reason":"per_ip","upgrade":"..."}
+        //   {"error":"unsafe_url","field":"url","reason":"private_ip"}
+        //   {"error":"unsupported_in_demo","field":"user_password","upgrade":"..."}
+        //   {"error":"body_too_large","max_bytes":1048576,"upgrade":"..."}
+        // We do a hand-rolled parse to avoid pulling in Json.NET as a hard dependency.
+
+        internal static ApiException TryBuildDemoException(int statusCode, string body, WebHeaderCollection headers, Exception inner)
+        {
+            int retryAfter = 0;
+            if (headers != null)
+            {
+                string ra = headers["Retry-After"];
+                if (!string.IsNullOrEmpty(ra)) int.TryParse(ra, out retryAfter);
+            }
+            return TryBuildDemoExceptionCore(statusCode, body, retryAfter, inner);
+        }
+
+#if NET_STANDARD_20
+        internal static ApiException TryBuildDemoExceptionFromHttpClient(int statusCode, string body, System.Net.Http.Headers.HttpResponseHeaders responseHeaders, System.Net.Http.Headers.HttpContentHeaders contentHeaders)
+        {
+            int retryAfter = 0;
+            try
+            {
+                if (responseHeaders != null && responseHeaders.RetryAfter != null && responseHeaders.RetryAfter.Delta.HasValue)
+                {
+                    retryAfter = (int)responseHeaders.RetryAfter.Delta.Value.TotalSeconds;
+                }
+            }
+            catch { }
+            return TryBuildDemoExceptionCore(statusCode, body, retryAfter, null);
+        }
+#endif
+
+        private static ApiException TryBuildDemoExceptionCore(int statusCode, string body, int retryAfter, Exception inner)
+        {
+            if (string.IsNullOrEmpty(body)) return null;
+            string error  = ExtractJsonField(body, "error");
+            if (string.IsNullOrEmpty(error)) return null;
+            string reason = ExtractJsonField(body, "reason");
+            string field  = ExtractJsonField(body, "field");
+            string upgrade = ExtractJsonField(body, "upgrade");
+
+            switch (error)
+            {
+                case "rate_limited":
+                    return new DemoRateLimitException(statusCode, reason, retryAfter, upgrade, body, inner);
+                case "unsafe_url":
+                    return new DemoSafetyException(statusCode, field, reason, body, inner);
+                case "unsupported_in_demo":
+                    return new DemoUnsupportedException(statusCode, field, upgrade, body, inner);
+                case "body_too_large":
+                    return new ApiException(string.Format("({0}) Demo request body exceeds the demo cap. Upgrade at {1}.", statusCode, upgrade ?? "https://selectpdf.com/pricing/"), inner);
+                default:
+                    return null;
+            }
+        }
+
+        private static string ExtractJsonField(string json, string field)
+        {
+            // Hand-rolled extraction of a top-level string field from a flat JSON object.
+            // Matches "field":"value" with arbitrary whitespace and basic backslash-escape handling.
+            if (string.IsNullOrEmpty(json) || string.IsNullOrEmpty(field)) return null;
+            string needle = "\"" + field + "\"";
+            int idx = json.IndexOf(needle, StringComparison.Ordinal);
+            if (idx < 0) return null;
+            idx = json.IndexOf(':', idx + needle.Length);
+            if (idx < 0) return null;
+            // skip whitespace
+            while (idx + 1 < json.Length && char.IsWhiteSpace(json[idx + 1])) idx++;
+            if (idx + 1 >= json.Length) return null;
+            char first = json[idx + 1];
+            if (first == '"')
+            {
+                int start = idx + 2;
+                var sb = new StringBuilder();
+                int i = start;
+                while (i < json.Length)
+                {
+                    char c = json[i];
+                    if (c == '\\' && i + 1 < json.Length) { sb.Append(json[i + 1]); i += 2; continue; }
+                    if (c == '"') return sb.ToString();
+                    sb.Append(c); i++;
+                }
+                return sb.ToString();
+            }
+            // numeric / bool / null — read until comma / brace
+            int e = idx + 1;
+            while (e < json.Length && json[e] != ',' && json[e] != '}' && json[e] != '\n' && json[e] != '\r') e++;
+            return json.Substring(idx + 1, e - idx - 1).Trim();
+        }
     }
 }

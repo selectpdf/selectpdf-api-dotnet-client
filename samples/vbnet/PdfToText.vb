@@ -1,4 +1,4 @@
-﻿Imports System
+Imports System
 Imports SelectPdf.Api
 
 Public Class PdfToText
@@ -6,6 +6,8 @@ Public Class PdfToText
         Dim testUrl As String = "https://selectpdf.com/demo/files/selectpdf.pdf"
         Dim testPdf As String = "Input.pdf"
         Dim localFile As String = "Result.txt"
+
+        ' PdfToText requires an API key (no demo endpoint for this service).
         Dim apiKey As String = "Your API key here"
 
         Console.WriteLine("This is SelectPdf-{0}.", ApiClient.CLIENT_VERSION)
@@ -21,29 +23,33 @@ Public Class PdfToText
 
             Console.WriteLine("Starting pdf to text ...")
 
-            ' convert local pdf to local text file
-            client.getTextFromFileToFile(testPdf, localFile)
-
-            ' extract text from local pdf to memory
-            ' Dim text As String = client.getTextFromFile(testPdf)
-            ' print text
-            ' Console.WriteLine(text)
-
             ' convert pdf from public url to local text file
-            ' client.getTextFromUrlToFile(testUrl, localFile)
+            client.getTextFromUrlToFile(testUrl, localFile)
 
             ' extract text from pdf from public url to memory
             ' Dim text As String = client.getTextFromUrl(testUrl)
-            ' print text
+            ' Console.WriteLine(text)
+
+            ' convert local pdf to local text file
+            ' client.getTextFromFileToFile(testPdf, localFile)
+
+            ' extract text from local pdf to memory
+            ' Dim text As String = client.getTextFromFile(testPdf)
             ' Console.WriteLine(text)
 
             Console.WriteLine("Finished! Number of pages processed: {0}.", client.getNumberOfPages())
+
+            ' response telemetry (SDK 1.5.0)
+            Console.WriteLine("Mode: {0}, Execution: {1}.", client.Mode, client.ExecutionMode)
+            Console.WriteLine("Credits remaining: {0} / {1}.", client.CreditsRemaining, client.CreditsTotal)
 
             ' get API usage
             Dim usageClient As UsageClient = New UsageClient(apiKey)
             Dim usage As UsageInformation = usageClient.getUsage(False)
             Console.WriteLine("Conversions remained this month: {0}.", usage.Available)
 
+        Catch ex As ApiException
+            Console.WriteLine("API error: {0}", ex.Message)
         Catch ex As Exception
             Console.WriteLine("An error occurred: " & ex.Message)
         End Try

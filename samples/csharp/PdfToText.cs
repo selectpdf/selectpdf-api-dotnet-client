@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using SelectPdf.Api;
 
 namespace Samples
@@ -10,6 +10,8 @@ namespace Samples
             string testUrl = "https://selectpdf.com/demo/files/selectpdf.pdf";
             string testPdf = "Input.pdf";
             string localFile = "Result.txt";
+
+            // PdfToText requires an API key (no demo endpoint for this service).
             string apiKey = "Your API key here";
 
             Console.WriteLine("This is SelectPdf-{0}.", ApiClient.CLIENT_VERSION);
@@ -27,28 +29,35 @@ namespace Samples
 
                 Console.WriteLine("Starting pdf to text ...");
 
-                // convert local pdf to local text file
-                client.getTextFromFileToFile(testPdf, localFile);
-
-                // extract text from local pdf to memory
-                // string text = client.getTextFromFile(testPdf);
-                // print text
-                // Console.WriteLine(text);
-
                 // convert pdf from public url to local text file
-                // client.getTextFromUrlToFile(testUrl, localFile);
+                client.getTextFromUrlToFile(testUrl, localFile);
 
                 // extract text from pdf from public url to memory
                 // string text = client.getTextFromUrl(testUrl);
-                // print text
+                // Console.WriteLine(text);
+
+                // convert local pdf to local text file
+                // client.getTextFromFileToFile(testPdf, localFile);
+
+                // extract text from local pdf to memory
+                // string text = client.getTextFromFile(testPdf);
                 // Console.WriteLine(text);
 
                 Console.WriteLine("Finished! Number of pages processed: {0}.", client.getNumberOfPages());
+
+                // response telemetry (SDK 1.5.0)
+                Console.WriteLine("Mode: {0}, Execution: {1}.", client.Mode, client.ExecutionMode);
+                Console.WriteLine("Credits remaining: {0} / {1}.",
+                    client.CreditsRemaining, client.CreditsTotal);
 
                 // get API usage
                 UsageClient usageClient = new UsageClient(apiKey);
                 UsageInformation usage = usageClient.getUsage(false);
                 Console.WriteLine("Conversions remained this month: {0}.", usage.Available);
+            }
+            catch (ApiException ex)
+            {
+                Console.WriteLine("API error: {0}", ex.Message);
             }
             catch (Exception ex)
             {

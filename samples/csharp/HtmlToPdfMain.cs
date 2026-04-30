@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using SelectPdf.Api;
 
 namespace Samples
@@ -9,7 +9,11 @@ namespace Samples
         {
             string url = "https://selectpdf.com";
             string localFile = "Test.pdf";
-            string apiKey = "Your API key here";
+
+            // Pass null / empty / "demo" to use the keyless demo endpoint
+            // (output is watermarked, capped at 5 pages, Chromium engine only).
+            // Replace with a real key for full production output.
+            string apiKey = null;
 
             Console.WriteLine("This is SelectPdf-{0}.", ApiClient.CLIENT_VERSION);
 
@@ -24,9 +28,9 @@ namespace Samples
                     .setPageSize(PageSize.A4) // PDF page size
                     .setPageOrientation(PageOrientation.Portrait) // PDF page orientation
                     .setMargins(0) // PDF page margins
-                    .setRenderingEngine(RenderingEngine.WebKit) // rendering engine
+                    .setRenderingEngine(RenderingEngine.WebKit) // rendering engine (demo mode forces Chromium)
                     .setConversionDelay(1) // conversion delay
-                    .setNavigationTimeout(30) // navigation timeout 
+                    .setNavigationTimeout(30) // navigation timeout
                     .setShowPageNumbers(false) // page numbers
                     .setPageBreaksEnhancedAlgorithm(true) // enhanced page break algorithm
 
@@ -39,7 +43,7 @@ namespace Samples
                     // .setKeepImagesTogether(true) // keep images together
                     // .setScaleImages(true) // scale images to create smaller pdfs
                     // .setSinglePagePdf(true) // generate a single page PDF
-                    // .setUserPassword("password") // secure the PDF with a password
+                    // .setUserPassword("password") // secure the PDF with a password (paid keys only)
 
                     // generate automatic bookmarks
 
@@ -63,10 +67,45 @@ namespace Samples
 
                 Console.WriteLine("Finished! Number of pages: {0}.", client.getNumberOfPages());
 
-                // get API usage
-                UsageClient usageClient = new UsageClient(apiKey);
-                UsageInformation usage = usageClient.getUsage(false);
-                Console.WriteLine("Conversions remained this month: {0}.", usage.Available);
+                // response telemetry (SDK 1.5.0)
+                Console.WriteLine("Mode: {0}, Execution: {1}.", client.Mode, client.ExecutionMode);
+                if (client.IsDemoMode)
+                {
+                    if (client.WasClamped)
+                        Console.WriteLine("Demo clamped: {0}.", string.Join(", ", client.ClampedFields));
+                    if (client.WasAnyFieldDropped)
+                        Console.WriteLine("Demo dropped: {0}.", string.Join(", ", client.DroppedFields));
+                }
+                else
+                {
+                    Console.WriteLine("Credits remaining: {0} / {1}.",
+                        client.CreditsRemaining, client.CreditsTotal);
+
+                    // get API usage (paid keys only — demo endpoint has no usage account)
+                    UsageClient usageClient = new UsageClient(apiKey);
+                    UsageInformation usage = usageClient.getUsage(false);
+                    Console.WriteLine("Conversions remained this month: {0}.", usage.Available);
+                }
+            }
+            catch (DemoRateLimitException ex)
+            {
+                // reason is one of: per_ip, daily_cap, concurrency
+                Console.WriteLine("Demo rate limit ({0}). Retry after {1}s. Upgrade: {2}",
+                    ex.Reason, ex.RetryAfter, ex.UpgradeUrl);
+            }
+            catch (DemoSafetyException ex)
+            {
+                // demo only converts public URLs — internal/private hosts are rejected
+                Console.WriteLine("Demo safety guard rejected '{0}' (reason={1}).", ex.Field, ex.Reason);
+            }
+            catch (DemoUnsupportedException ex)
+            {
+                // feature not available on the demo endpoint (e.g. setUserPassword)
+                Console.WriteLine("Feature '{0}' not available in demo mode. Upgrade: {1}", ex.Field, ex.UpgradeUrl);
+            }
+            catch (ApiException ex)
+            {
+                Console.WriteLine("API error: {0}", ex.Message);
             }
             catch (Exception ex)
             {

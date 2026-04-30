@@ -161,14 +161,151 @@ namespace SelectPdf.Api
     /// </example>
     public class HtmlToPdfClient : ApiClient
     {
+        private const string ProductionEndpoint = "https://selectpdf.com/api2/convert/";
+        private const string DemoEndpoint       = "https://selectpdf.com/api2/convert/demo/";
+
+        /// <summary>
+        /// True if the client was constructed for the keyless demo endpoint
+        /// (apiKey was null, empty, or "demo"). Set at construction time and
+        /// stable for the lifetime of the client. Independent of the actual
+        /// endpoint URL — calling setApiEndpoint(...) does NOT change this flag.
+        /// </summary>
+        public bool IsDemoMode { get; private set; }
+
+        /// <summary>
+        /// True if the most recent response was tagged X-SelectPdf-Mode: demo
+        /// (i.e. the request actually landed on a demo endpoint). Derived from
+        /// the base ApiClient.Mode property — populated after every successful
+        /// conversion that returns the X-SelectPdf-Mode header.
+        /// </summary>
+        public bool IsDemoResponse
+        {
+            get { return !string.IsNullOrEmpty(Mode) && Mode.Equals("demo", StringComparison.OrdinalIgnoreCase); }
+        }
+
+        /// <summary>
+        /// Names of the parameters the demo endpoint clamped on the most recent
+        /// conversion (e.g. ["max_load_time", "engine"]). Empty array if nothing
+        /// was clamped or for non-demo responses. "Clamped" means the value was
+        /// modified (capped, force-set), not discarded.
+        /// </summary>
+        public string[] ClampedFields { get; private set; }
+
+        /// <summary>
+        /// True if the most recent response had any clamped fields.
+        /// </summary>
+        public bool WasClamped
+        {
+            get { return ClampedFields != null && ClampedFields.Length > 0; }
+        }
+
+        /// <summary>
+        /// Names of the parameters the demo endpoint silently dropped on the
+        /// most recent conversion (e.g. ["auth_username", "cookies"]). The demo
+        /// endpoint refuses to honor a small set of fields for safety reasons —
+        /// auth credentials, cookies, raw_parameters, pdf_name, async — and
+        /// reports any caller-supplied value via the X-SelectPdf-Demo-Dropped
+        /// response header. Empty array if nothing was dropped or for non-demo
+        /// responses. Distinct from <see cref="ClampedFields"/>: clamped = value
+        /// modified, dropped = value thrown away.
+        /// </summary>
+        public string[] DroppedFields { get; private set; }
+
+        /// <summary>
+        /// True if the most recent response reported any dropped fields.
+        /// </summary>
+        public bool WasAnyFieldDropped
+        {
+            get { return DroppedFields != null && DroppedFields.Length > 0; }
+        }
+
         /// <summary>
         /// Construct the Html To Pdf Client.
+        ///
+        /// Pass a paid API key for production use. Pass null, empty string, or
+        /// "demo" (case-insensitive) to use the keyless demo endpoint — output
+        /// is watermarked and capped at 5 pages, but no signup is required.
         /// </summary>
-        /// <param name="apiKey">API key.</param>
-        public HtmlToPdfClient(string apiKey)
+        /// <param name="apiKey">
+        /// API key. Defaults to null which selects demo mode. Pass a real key
+        /// for full unwatermarked output.
+        /// </param>
+        public HtmlToPdfClient(string apiKey = null)
         {
-            apiEndpoint = "https://selectpdf.com/api2/convert/";
-            parameters["key"] = apiKey;
+            ClampedFields = new string[0];
+            DroppedFields = new string[0];
+
+            bool demo = string.IsNullOrEmpty(apiKey) ||
+                        apiKey.Trim().Equals("demo", StringComparison.OrdinalIgnoreCase);
+
+            if (demo)
+            {
+                apiEndpoint = DemoEndpoint;
+                IsDemoMode = true;
+                // Demo is keyless. Don't include parameters["key"] — server ignores it
+                // anyway, but keeping it absent is cleaner over the wire.
+            }
+            else
+            {
+                apiEndpoint = ProductionEndpoint;
+                IsDemoMode = false;
+                parameters["key"] = apiKey;
+            }
+        }
+
+        /// <summary>
+        /// Capture demo-specific response headers (the demo-clamped fields list
+        /// and the demo-dropped fields list).
+        /// Mode and ExecutionMode are read in the base class and inherited.
+        /// </summary>
+        protected override void OnResponseHeadersReceived(System.Net.WebHeaderCollection headers)
+        {
+            ClampedFields = ParseFieldList(headers, "X-SelectPdf-Demo-Clamped");
+            DroppedFields = ParseFieldList(headers, "X-SelectPdf-Demo-Dropped");
+        }
+
+#if NET_STANDARD_20
+        /// <summary>
+        /// HttpClient variant of the demo-headers capture. Demo response headers
+        /// are emitted on Content.Headers, not the response message headers, so
+        /// both collections need to be checked.
+        /// </summary>
+        protected override void OnResponseHeadersReceivedHttpClient(
+            System.Net.Http.Headers.HttpResponseHeaders headers,
+            System.Net.Http.Headers.HttpContentHeaders contentHeaders)
+        {
+            ClampedFields = ParseFieldList(headers, contentHeaders, "X-SelectPdf-Demo-Clamped");
+            DroppedFields = ParseFieldList(headers, contentHeaders, "X-SelectPdf-Demo-Dropped");
+        }
+#endif
+
+        private static string[] ParseFieldList(System.Net.WebHeaderCollection headers, string name)
+        {
+            if (headers == null) return new string[0];
+            return SplitFields(headers[name]);
+        }
+
+#if NET_STANDARD_20
+        private static string[] ParseFieldList(
+            System.Net.Http.Headers.HttpResponseHeaders headers,
+            System.Net.Http.Headers.HttpContentHeaders contentHeaders,
+            string name)
+        {
+            System.Collections.Generic.IEnumerable<string> values;
+            if (contentHeaders != null && contentHeaders.TryGetValues(name, out values))
+                return SplitFields(System.Linq.Enumerable.First(values));
+            if (headers != null && headers.TryGetValues(name, out values))
+                return SplitFields(System.Linq.Enumerable.First(values));
+            return new string[0];
+        }
+#endif
+
+        private static string[] SplitFields(string raw)
+        {
+            if (string.IsNullOrEmpty(raw)) return new string[0];
+            string[] parts = raw.Split(new[] { ',' });
+            for (int i = 0; i < parts.Length; i++) parts[i] = parts[i].Trim();
+            return parts;
         }
 
         /// <summary>
@@ -680,8 +817,11 @@ namespace SelectPdf.Api
         /// </summary>
         /// <param name="userPassword">PDF user password.</param>
         /// <returns>Reference to the current object.</returns>
+        /// <exception cref="DemoUnsupportedException">Thrown if the client was constructed in demo mode.</exception>
         public HtmlToPdfClient setUserPassword(string userPassword)
         {
+            if (IsDemoMode && !string.IsNullOrEmpty(userPassword))
+                throw new DemoUnsupportedException("user_password");
             parameters["user_password"] = userPassword;
             return this;
         }
@@ -691,8 +831,11 @@ namespace SelectPdf.Api
         /// </summary>
         /// <param name="ownerPassword">PDF owner password.</param>
         /// <returns>Reference to the current object.</returns>
+        /// <exception cref="DemoUnsupportedException">Thrown if the client was constructed in demo mode.</exception>
         public HtmlToPdfClient setOwnerPassword(string ownerPassword)
         {
+            if (IsDemoMode && !string.IsNullOrEmpty(ownerPassword))
+                throw new DemoUnsupportedException("owner_password");
             parameters["owner_password"] = ownerPassword;
             return this;
         }

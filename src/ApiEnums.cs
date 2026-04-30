@@ -98,7 +98,11 @@ namespace SelectPdf.Api
         /// <summary>
         /// Blink rendering engine.
         /// </summary>
-        Blink
+        Blink,
+        /// <summary>
+        /// Chromium rendering engine.
+        /// </summary>
+        Chromium
     }
 
     /// <summary>

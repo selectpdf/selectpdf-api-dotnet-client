@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using SelectPdf.Api;
 
@@ -10,6 +10,8 @@ namespace Samples
         {
             string testUrl = "https://selectpdf.com/demo/files/selectpdf.pdf";
             string testPdf = "Input.pdf";
+
+            // SearchPdf is exposed by PdfToTextClient and requires an API key.
             string apiKey = "Your API key here";
 
             Console.WriteLine("This is SelectPdf-{0}.", ApiClient.CLIENT_VERSION);
@@ -27,20 +29,29 @@ namespace Samples
 
                 Console.WriteLine("Starting search pdf ...");
 
-                // search local pdf
-                IList<TextPosition> results = client.searchFile(testPdf, "pdf");
-
                 // search pdf from public url
-                // IList<TextPosition> results = client.searchUrl(testUrl, "pdf");
+                IList<TextPosition> results = client.searchUrl(testUrl, "pdf");
+
+                // search local pdf
+                // IList<TextPosition> results = client.searchFile(testPdf, "pdf");
 
                 Console.WriteLine("Search results:\n{0}\nSearch results count: {1}.", string.Join("\n", results), results.Count);
 
                 Console.WriteLine("Finished! Number of pages processed: {0}.", client.getNumberOfPages());
 
+                // response telemetry (SDK 1.5.0)
+                Console.WriteLine("Mode: {0}, Execution: {1}.", client.Mode, client.ExecutionMode);
+                Console.WriteLine("Credits remaining: {0} / {1}.",
+                    client.CreditsRemaining, client.CreditsTotal);
+
                 // get API usage
                 UsageClient usageClient = new UsageClient(apiKey);
                 UsageInformation usage = usageClient.getUsage(false);
                 Console.WriteLine("Conversions remained this month: {0}.", usage.Available);
+            }
+            catch (ApiException ex)
+            {
+                Console.WriteLine("API error: {0}", ex.Message);
             }
             catch (Exception ex)
             {

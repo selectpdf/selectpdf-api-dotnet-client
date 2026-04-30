@@ -2,16 +2,138 @@
 
 SelectPdf Online REST API is a professional solution for managing PDF documents online. It now has a dedicated, easy to use, .NET client library that can be setup in minutes.
 
+## Try without an API key (demo mode)
+
+```csharp
+using System;
+using System.IO;
+using SelectPdf.Api;
+
+class Program {
+    static void Main() {
+        // No API key -> keyless demo mode (5-page cap, watermarked output, Chromium engine).
+        HtmlToPdfClient client = new HtmlToPdfClient(); // also: new HtmlToPdfClient("demo")
+        byte[] pdf = client.convertUrl("https://example.com");
+        File.WriteAllBytes("demo.pdf", pdf);
+        Console.WriteLine("Pages: {0}", client.getNumberOfPages());
+        if (client.WasClamped)
+            Console.WriteLine("Server clamped: {0}", string.Join(",", client.ClampedFields));
+        // Upgrade for unwatermarked, unlimited-page PDFs: https://selectpdf.com/pricing/
+    }
+}
+```
+
+### Demo mode limitations
+
+Demo mode is intended for evaluating the API. To keep the public endpoint stable and prevent abuse, several limits and restrictions apply that don't exist on a paid endpoint.
+
+**Output:**
+
+- **5 pages maximum.** Pages beyond the fifth are dropped, then a final branding/notice page is appended (so a typical demo PDF is 1–6 pages depending on the source).
+- **Watermarked.** A diagonal SelectPdf demo stamp is rendered on every page plus a footer attribution line. The watermark is added by the rendering engine itself — there is no client- or server-side post-processing that can be disabled.
+- **Chromium rendering engine only.** If you call `setRenderingEngine(...)` with `WebKit`, `Restricted`, or `Blink`, the server silently force-clamps to `Chromium`. The response carries `WasClamped == true` and `ClampedFields` will include `engine`.
+
+**Parameters not allowed:**
+
+| Parameter / setter | Behavior in demo mode |
+| --- | --- |
+| `setUserPassword(...)` | Throws `DemoUnsupportedException` client-side (before the request leaves the SDK). |
+| `setOwnerPassword(...)` | Same — throws `DemoUnsupportedException`. |
+| `async = true` | Not supported. The demo endpoint is synchronous only; there is no `/api2/asyncjob/` polling for demo conversions. |
+
+The two clamped time parameters are accepted but capped:
+
+| Parameter | Production cap | Demo cap |
+| --- | --- | --- |
+| `setNavigationTimeout(...)` (`max_load_time`) | up to 120 s | clamped to **15 s** |
+| `setConversionDelay(...)` (`min_load_time`) | up to 120 s | clamped to **5 s** |
+
+When clamping happens, the response sets `WasClamped = true` and lists the affected field names in `ClampedFields`.
+
+**Silently dropped fields:**
+
+A few request fields are accepted but never honored by the demo endpoint — they're zeroed out server-side because they would compromise the demo's safety posture. Any caller-supplied value is reported back via `WasAnyFieldDropped` / `DroppedFields` so you can see what was ignored.
+
+| Field | Reason |
+| --- | --- |
+| `auth_username` / `auth_password` | Would let demo callers pump credentials at internal HTTP-Basic endpoints. |
+| `cookies` (`setCookies(...)`) / `cookies_string` | Session-hijack vector if combined with a target inside our own infra. |
+| `raw_parameters` | Escape hatch that bypasses the parameter clamp; must stay dropped. |
+| `pdf_name` | Demo always returns inline `demo.pdf`. |
+| `async` | Demo is sync-only. |
+
+Distinct from `ClampedFields`: clamped means the value was modified (capped, force-set), dropped means it was thrown away.
+
+**URLs:**
+
+The demo endpoint accepts only publicly reachable `http://` / `https://` URLs. Requests targeting non-public destinations are rejected with `DemoSafetyException` (HTTP 400). Use a paid endpoint if you need to convert content from a private network.
+
+**Rate limits:**
+
+| Layer | Default | Failure |
+| --- | --- | --- |
+| Per-IP | 30 requests / rolling hour | `DemoRateLimitException` with `Reason="per_ip"`, `RetryAfter≈3600` |
+| Daily global ceiling | 50,000 successful conversions / 24 h across all clients | `DemoRateLimitException` with `Reason="daily_cap"` |
+| Concurrency | 4 in-flight conversions globally | `DemoRateLimitException` with `Reason="concurrency"`, `RetryAfter≈5` |
+
+`Retry-After` is taken from the response header. Both the per-IP and daily counters include rejected attempts, so spamming after a block doesn't reset anything.
+
+**Request size:**
+
+- **1 MB request body cap.** Larger payloads return HTTP 413 — typically only an issue if you're inlining a very large HTML string.
+
+**Response:**
+
+- No `X-SelectPdf-Credits-Total` / `X-SelectPdf-Credits-Remaining` headers (the demo endpoint is keyless, so there's no billing account to attribute usage to). On the SDK client these surface as `client.CreditsTotal == null` and `client.CreditsRemaining == null`.
+- `client.Mode == "demo"` (helper: `client.IsDemoResponse == true`).
+- `client.ExecutionMode` is either `"in-process"` or `"worker"` depending on how the server was deployed.
+
+### Catching demo-mode errors
+
+The SDK exposes three typed exceptions for demo-specific failure modes; everything else surfaces as a regular `ApiException` (paid-endpoint errors) or `WebException` (network failures):
+
+```csharp
+try
+{
+    HtmlToPdfClient client = new HtmlToPdfClient(); // demo mode
+    byte[] pdf = client.convertUrl("https://example.com");
+}
+catch (DemoRateLimitException ex)
+{
+    // Reason: "per_ip" | "daily_cap" | "concurrency"
+    Console.WriteLine("Rate limited: {0}, retry after {1}s", ex.Reason, ex.RetryAfter);
+    Console.WriteLine("Upgrade: {0}", ex.UpgradeUrl);
+}
+catch (DemoSafetyException ex)
+{
+    // The supplied URL was rejected. Use a paid endpoint for non-public targets.
+    Console.WriteLine("URL rejected: {0}", ex.Message);
+}
+catch (DemoUnsupportedException ex)
+{
+    // Field: which parameter is unavailable in demo mode
+    Console.WriteLine("'{0}' not available in demo mode. Upgrade: {1}", ex.Field, ex.UpgradeUrl);
+}
+```
+
+For unwatermarked production output without these limits, pass a real API key — same client class, same setters:
+
+```csharp
+HtmlToPdfClient client = new HtmlToPdfClient("Your API key here");
+```
+
+`IsDemoMode` on the client is set at construction time and stable for the client's lifetime, so a real-key client will never silently fall back to demo behavior.
+
 ## Installation
 
-Download [selectpdf-api-dotnet-client-1.4.0.zip](https://github.com/selectpdf/selectpdf-api-dotnet-client/releases/download/1.4.0/selectpdf-api-dotnet-client-1.4.0.zip), unzip it and add a reference to SelectPdf.Api.dll to your project.
+Download [selectpdf-api-dotnet-client-1.5.0.zip](https://github.com/selectpdf/selectpdf-api-dotnet-client/releases/download/1.5.0/selectpdf-api-dotnet-client-1.5.0.zip), unzip it and add a reference to SelectPdf.Api.dll to your project.
 
 OR
 
 Install SelectPdf .NET Client for Online API via Nuget: [SelectPdf API on Nuget](https://www.nuget.org/packages/SelectPdf.Api/).
 
 ```
-Install-Package SelectPdf.Api -Version 1.4.0
+Install-Package SelectPdf.Api -Version 1.5.0
 ```
 
 OR

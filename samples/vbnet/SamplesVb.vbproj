@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup Label="Globals">
+    <SccProjectName></SccProjectName>
+    <SccProvider></SccProvider>
+    <SccAuxPath></SccAuxPath>
+    <SccLocalPath></SccLocalPath>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>SamplesVb</RootNamespace>
+    <TargetFramework>net5.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="mssccprj.scc" />
+    <None Remove="SamplesVb.vbproj.vspscc" />
+    <None Remove="vssver2.scc" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SelectPdf.Api" Version="1.5.0" />
+  </ItemGroup>
+
+</Project>

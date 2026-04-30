@@ -68,9 +68,10 @@ namespace SelectPdf.Api
         /// <returns>True if job finished.</returns>
         public bool finished()
         {
-            // If last HTTP status code received is 200 OK, the job is finished. 
-            // If last HTTP status code received is 202 Accepted, the job is still running. 
-            return this.lastHTTPCode == (int)HttpStatusCode.OK;
+            // 200 OK - the job is finished (successfully). 
+            // 202 Accepted - the job is still running. 
+            // 499 (or some other error code) - error - job is finished (with error).
+            return this.lastHTTPCode != (int)HttpStatusCode.Accepted;
         }
     }
 }

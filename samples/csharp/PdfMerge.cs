@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using SelectPdf.Api;
 
 namespace Samples
@@ -10,6 +10,8 @@ namespace Samples
             string testUrl = "https://selectpdf.com/demo/files/selectpdf.pdf";
             string testPdf = "Input.pdf";
             string localFile = "Result.pdf";
+
+            // PdfMerge requires an API key (no demo endpoint for this service).
             string apiKey = "Your API key here";
 
             Console.WriteLine("This is SelectPdf-{0}.", ApiClient.CLIENT_VERSION);
@@ -22,8 +24,8 @@ namespace Samples
                 client
                     // specify the pdf files that will be merged (order will be preserved in the final pdf)
 
-                    .addFile(testPdf) // add PDF from local file
-                    .addUrlFile(testUrl) // add PDF From public url
+                    .addUrlFile(testUrl) // add PDF from public url
+                    // .addFile(testPdf) // add PDF from local file
                     // .addFile(testPdf, "pdf_password") // add PDF (that requires a password) from local file
                     // .addUrlFile(testUrl, "pdf_password") // add PDF (that requires a password) from public url
                 ;
@@ -38,10 +40,19 @@ namespace Samples
 
                 Console.WriteLine("Finished! Number of pages: {0}.", client.getNumberOfPages());
 
+                // response telemetry (SDK 1.5.0)
+                Console.WriteLine("Mode: {0}, Execution: {1}.", client.Mode, client.ExecutionMode);
+                Console.WriteLine("Credits remaining: {0} / {1}.",
+                    client.CreditsRemaining, client.CreditsTotal);
+
                 // get API usage
                 UsageClient usageClient = new UsageClient(apiKey);
                 UsageInformation usage = usageClient.getUsage(false);
                 Console.WriteLine("Conversions remained this month: {0}.", usage.Available);
+            }
+            catch (ApiException ex)
+            {
+                Console.WriteLine("API error: {0}", ex.Message);
             }
             catch (Exception ex)
             {
