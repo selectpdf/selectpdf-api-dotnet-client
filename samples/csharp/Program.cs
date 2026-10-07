@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace Samples
 {
@@ -33,9 +33,15 @@ namespace Samples
                 case "async":
                     AsyncConversion.RunTest();
                     break;
+                case "accessible":
+                    AccessiblePdf.RunTest();
+                    break;
+                case "invoice":
+                    ElectronicInvoice.RunTest();
+                    break;
                 default:
                     Console.WriteLine("Unknown sample: {0}", sample);
-                    Console.WriteLine("Available: htmltopdf, headersfooters, pdfmerge, pdftotext, searchpdf, webelements, async");
+                    Console.WriteLine("Available: htmltopdf, headersfooters, pdfmerge, pdftotext, searchpdf, webelements, async, accessible, invoice");
                     break;
             }
         }

@@ -1,6 +1,6 @@
-# SelectPdf Online REST API — VB.NET Samples
+﻿# SelectPdf Online REST API — VB.NET Samples
 
-Runnable VB.NET samples for the **SelectPdf.Api 1.5.0** NuGet package, covering every service the API exposes: HTML-to-PDF (sync and async), PDF merge, PDF-to-text, text search, and web-element location lookup.
+Runnable VB.NET samples for the **SelectPdf.Api 1.6.0** NuGet package, covering every service the API exposes: HTML-to-PDF (sync and async), PDF merge, PDF-to-text, text search, and web-element location lookup.
 
 ## Requirements
 
@@ -11,10 +11,10 @@ Runnable VB.NET samples for the **SelectPdf.Api 1.5.0** NuGet package, covering 
 ## Get the package
 
 ```
-Install-Package SelectPdf.Api -Version 1.5.0
+Install-Package SelectPdf.Api -Version 1.6.0
 ```
 
-The samples already reference `SelectPdf.Api 1.5.0` from nuget.org. A first `dotnet build` will restore it automatically.
+The samples already reference `SelectPdf.Api 1.6.0` from nuget.org. A first `dotnet build` will restore it automatically.
 
 ## Set your API key
 
@@ -41,6 +41,8 @@ dotnet run -- pdftotext
 dotnet run -- searchpdf
 dotnet run -- webelements
 dotnet run -- async
+dotnet run -- accessible
+dotnet run -- invoice
 ```
 
 | Sample | File | Service | Demo-friendly |
@@ -52,6 +54,15 @@ dotnet run -- async
 | Search PDF | `SearchPdf.vb` | search inside a PDF | no (paid key) |
 | Web Elements | `WebElements.vb` | locate HTML elements in the generated PDF | no (paid key) |
 | Async conversion | `AsyncConversion.vb` | long-running HTML → PDF jobs | no (paid key) |
+| Accessible PDF | `AccessiblePdf.vb` | tagged PDF + PDF/A, PDF/X, PDF/SiqQ | yes |
+| Electronic invoice | `ElectronicInvoice.vb` | ZUGFeRD / Factur-X hybrid invoice | no (paid key) |
+
+## What 1.6.0 adds you'll see in the samples
+
+- **Accessible PDF and PDF standards** on `HtmlToPdfClient` — `setTagged`, `setPdfStandard` and `setDocumentLanguage`. Tagged output needs the Blink or Chromium engine; if you do not set one, the API promotes the conversion to Chromium and reports it in the `X-SelectPdf-Engine` response header. See `AccessiblePdf.vb`.
+- **Electronic invoicing** — the new `InvoiceClient` creates ZUGFeRD / Factur-X hybrid invoices: one PDF/A-3 file with the invoice XML embedded. It derives from `HtmlToPdfClient`, so every conversion setting still applies. The attachment relationship is derived from the profile when you do not set one. See `ElectronicInvoice.vb`.
+- **Page height and authentication** on `HtmlToPdfClient` — `setWebPageFixedSize` cuts the PDF at the web page height (or, set to false, converts the whole page), and `setAuthUsername` / `setAuthPassword` send HTTP Basic credentials to the page being converted.
+- **New enums** — `PdfStandard`, `ZugferdProfile`, `ZugferdRelationship`, `ZugferdSchema`.
 
 ## What 1.5.0 adds you'll see in the samples
 
@@ -62,7 +73,7 @@ dotnet run -- async
 
 ## Demo-mode quick reference
 
-- 5-page cap, watermarked output, Chromium engine only.
+- 5-page cap (a longer document is cut to 5 pages plus a notice page), watermarked output, Chromium engine only.
 - Public URLs only (HTTPS preferred). Internal/private hosts are rejected with `DemoSafetyException`.
 - Per-IP and global rate limits — handled via `DemoRateLimitException` (read `Reason`, `RetryAfter`, `UpgradeUrl`).
 - `setUserPassword` / `setOwnerPassword` / `async = True` are not available — `DemoUnsupportedException`.

@@ -1,4 +1,4 @@
-Imports System
+﻿Imports System
 
 Module Program
     Sub Main(args As String())
@@ -21,9 +21,13 @@ Module Program
                 WebElements.RunTest()
             Case "async"
                 AsyncConversion.RunTest()
+            Case "accessible"
+                AccessiblePdf.RunTest()
+            Case "invoice"
+                ElectronicInvoice.RunTest()
             Case Else
                 Console.WriteLine("Unknown sample: {0}", sample)
-                Console.WriteLine("Available: htmltopdf, headersfooters, pdfmerge, pdftotext, searchpdf, webelements, async")
+                Console.WriteLine("Available: htmltopdf, headersfooters, pdfmerge, pdftotext, searchpdf, webelements, async, accessible, invoice")
         End Select
 
     End Sub

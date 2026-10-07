@@ -9,7 +9,14 @@
 
   <PropertyGroup>
     <TargetFrameworks>net20;net40;netstandard2.0</TargetFrameworks>
-    <DocumentationFile>SelectPdf.Api.xml</DocumentationFile>
+    <!-- Per-TFM, NOT a single fixed path. With one shared path the three
+         target frameworks compile in parallel into the same file and race:
+         the packed net40 xml has shipped truncated mid-element and
+         unparseable, which costs net40 consumers their IntelliSense and
+         feeds Sandcastle a half-empty api surface. GenerateDocumentationFile
+         puts it in $(OutputPath) per framework, where the nuspec and the
+         Sandcastle project already look for it. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <Authors>SelectPdf</Authors>
     <Product>.NET client for SelectPdf Online REST API</Product>
@@ -17,10 +24,10 @@
     <RepositoryUrl>https://github.com/selectpdf/selectpdf-api-dotnet-client</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <Description>SelectPdf HTML To PDF Online REST API is a professional solution that lets you create PDF from web pages and raw HTML code in your applications. The API is easy to use and the integration takes only a few lines of code. The generated PDFs are perfect. That makes SelectPdf API the best html to pdf online service that can be used.</Description>
-    <PackageTags>pdf, html-to-pdf, html-to-pdf-api</PackageTags>
-    <Version>1.5.0</Version>
-    <AssemblyVersion>1.5.0</AssemblyVersion>
-    <FileVersion>1.5.0</FileVersion>
+    <PackageTags>pdf, html-to-pdf, html-to-pdf-api, pdfa, pdf-ua, accessible-pdf, tagged-pdf, zugferd, factur-x, e-invoicing</PackageTags>
+    <Version>1.6.0</Version>
+    <AssemblyVersion>1.6.0</AssemblyVersion>
+    <FileVersion>1.6.0</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>

@@ -126,14 +126,14 @@ HtmlToPdfClient client = new HtmlToPdfClient("Your API key here");
 
 ## Installation
 
-Download [selectpdf-api-dotnet-client-1.5.0.zip](https://github.com/selectpdf/selectpdf-api-dotnet-client/releases/download/1.5.0/selectpdf-api-dotnet-client-1.5.0.zip), unzip it and add a reference to SelectPdf.Api.dll to your project.
+Download [selectpdf-api-dotnet-client-1.6.0.zip](https://github.com/selectpdf/selectpdf-api-dotnet-client/releases/download/1.6.0/selectpdf-api-dotnet-client-1.6.0.zip), unzip it and add a reference to SelectPdf.Api.dll to your project.
 
 OR
 
 Install SelectPdf .NET Client for Online API via Nuget: [SelectPdf API on Nuget](https://www.nuget.org/packages/SelectPdf.Api/).
 
 ```
-Install-Package SelectPdf.Api -Version 1.5.0
+Install-Package SelectPdf.Api -Version 1.6.0
 ```
 
 OR
@@ -160,6 +160,7 @@ SelectPdf HTML To PDF Online REST API is a professional solution that lets you c
 * Hide web page elements during the conversion.
 * Automatically generate bookmarks during the html to pdf conversion.
 * Support for partial page conversion.
+* Produce tagged, accessible PDF and target a PDF/A, PDF/X or PDF/SiqQ conformance level.
 * Easy integration, no third party libraries needed.
 * Works in all programming languages.
 * No installation required.
@@ -246,6 +247,74 @@ namespace SelectPdf.Api.Tests
         }
     }
 }
+```
+
+## Accessible PDF and PDF Standards
+
+Produce a tagged, accessible PDF and target a PDF conformance level, using the same `HtmlToPdfClient` you already use for conversions.
+
+### Features
+
+* Tagged PDF with a logical structure tree: headings, paragraphs, lists, tables, figures with alternate text, links and reading order.
+* Document language written as the PDF `/Lang` entry and onto the tagged structure elements.
+* PDF/A for long term archiving, PDF/X for graphics exchange, PDF/SiqQ for documents that will be digitally signed.
+* PDF/A-3A is the accessible archival level and implies a tagged document on its own.
+
+Tagged output requires the Blink or Chromium rendering engine - the WebKit engines cannot build a structure tree. If you do not set an engine, the API promotes the conversion to Chromium and reports the engine it used in the `X-SelectPdf-Engine` response header. Asking for tagged output together with an explicit WebKit engine is rejected rather than silently producing an untagged PDF.
+
+Note this produces tagged PDF/A output; it is not a conformance certification.
+
+### Sample Code - Accessible PDF
+
+```csharp
+using System;
+using SelectPdf.Api;
+
+HtmlToPdfClient client = new HtmlToPdfClient("Your API key here");
+client
+    .setTagged(true)
+    .setDocTitle("SelectPdf - accessible sample")
+    .setViewerDisplayDocTitle(true)
+    .setDocumentLanguage("en-US")
+    .setPdfStandard(PdfStandard.PdfA3A)
+;
+
+client.convertUrlToFile("https://selectpdf.com", "Accessible.pdf");
+Console.WriteLine("Pages: {0}.", client.getNumberOfPages());
+```
+
+## Electronic Invoicing API - ZUGFeRD / Factur-X
+
+Turn an HTML invoice into a hybrid electronic invoice: one PDF/A-3 file carrying both the invoice a human reads and the XML a recipient's accounting system reads, embedded as an associated file with the metadata invoice software looks for.
+
+### Features
+
+* Profiles MINIMUM, BASIC WL, BASIC, EN 16931, EXTENDED and XRECHNUNG.
+* The attachment relationship is derived from the profile when you do not set one.
+* The embedded file is named as the standard requires - `factur-x.xml`, or `xrechnung.xml` for the XRECHNUNG profile - because recipients look it up by name.
+* Factur-X 1.0 metadata by default; the deprecated ZUGFeRD 2.0 schema is available for recipients that still require it.
+* Carrier defaults to PDF/A-3A, the accessible level, so the visible invoice is readable by assistive technology as well as archivable.
+* Every HTML to PDF conversion setting applies, because `InvoiceClient` derives from `HtmlToPdfClient`.
+
+The invoice XML can only be embedded into a document created as PDF/A-3, so there is no variant that attaches it to an existing PDF you already have. An API key is required - the keyless demo endpoint does not produce electronic invoices.
+
+### Sample Code - Electronic Invoice
+
+```csharp
+using System;
+using SelectPdf.Api;
+
+InvoiceClient client = new InvoiceClient("Your API key here");
+client
+    .setInvoiceXmlFile("factur-x.xml")   // or setInvoiceXml(bytes / string)
+    .setZugferdProfile(ZugferdProfile.En16931)
+;
+
+client.createFromHtmlStringToFile(invoiceHtml, "Invoice.pdf");
+// ... or from the invoice page your application already renders:
+// client.createFromUrlToFile("https://your-app.example/invoices/INV-2026-001", "Invoice.pdf");
+
+Console.WriteLine("Pages: {0}.", client.getNumberOfPages());
 ```
 
 ## Pdf Merge API

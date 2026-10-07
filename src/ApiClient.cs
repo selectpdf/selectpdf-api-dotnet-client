@@ -133,7 +133,7 @@ namespace SelectPdf.Api
         /// <summary>
         /// Library version
         /// </summary>
-        public static string CLIENT_VERSION = "1.5.0";
+        public static string CLIENT_VERSION = "1.6.0";
 
 #if NET_STANDARD_20
         private static readonly HttpClient staticHttpClient;

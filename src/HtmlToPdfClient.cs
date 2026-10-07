@@ -401,6 +401,8 @@ namespace SelectPdf.Api
         /// <returns>Byte array containing the resulted PDF.</returns>
         public byte[] convertUrlAsync(string url)
         {
+            if (IsDemoMode)
+                throw new DemoUnsupportedException("async");
             if (!url.StartsWith("http://", true, null) && !url.StartsWith("https://", true, null))
             {
                 throw new ApiException("The supported protocols for the converted webpage are http:// and https://.");
@@ -597,6 +599,8 @@ namespace SelectPdf.Api
         /// <returns>Byte array containing the resulted PDF.</returns>
         public byte[] convertHtmlStringAsync(string htmlString, string baseUrl)
         {
+            if (IsDemoMode)
+                throw new DemoUnsupportedException("async");
             parameters["url"] = string.Empty;
             parameters["html"] = htmlString;
 
@@ -813,6 +817,60 @@ namespace SelectPdf.Api
         }
 
         /// <summary>
+        /// Produce a tagged, accessible PDF: a logical structure tree covering
+        /// headings, paragraphs, lists, tables, figures with alternate text,
+        /// links and reading order. Default is False.
+        /// </summary>
+        /// <remarks>
+        /// Requires the Blink or Chromium rendering engine - the WebKit engines
+        /// cannot produce a structure tree. If no engine is set, the API promotes
+        /// the request to Chromium and reports it in the X-SelectPdf-Engine
+        /// response header. Setting an explicit WebKit engine together with
+        /// tagged output is rejected by the API.
+        ///
+        /// A tagged document also needs a title, so set
+        /// <see cref="setDocTitle"/> - the converter falls back to the HTML
+        /// document title when it is not set.
+        /// </remarks>
+        /// <param name="tagged">Produce a tagged, accessible PDF.</param>
+        /// <returns>Reference to the current object.</returns>
+        public HtmlToPdfClient setTagged(bool tagged)
+        {
+            parameters["tagged"] = tagged.ToString();
+            return this;
+        }
+
+        /// <summary>
+        /// Set the PDF conformance target - PDF/A for archiving, PDF/X for
+        /// graphics exchange, PDF/SiqQ for digital signatures. Default is Full.
+        /// </summary>
+        /// <remarks>
+        /// PdfA3A is the accessible level of PDF/A-3: it implies a tagged
+        /// document, so it carries the same rendering-engine requirement as
+        /// <see cref="setTagged"/>.
+        /// </remarks>
+        /// <param name="pdfStandard">PDF conformance target.</param>
+        /// <returns>Reference to the current object.</returns>
+        public HtmlToPdfClient setPdfStandard(PdfStandard pdfStandard)
+        {
+            parameters["pdf_standard"] = pdfStandard.ToString();
+            return this;
+        }
+
+        /// <summary>
+        /// Set the natural language of the document, for example "en-US" or
+        /// "de-DE". Written as the PDF /Lang entry and onto tagged structure
+        /// elements. Default is "en-US".
+        /// </summary>
+        /// <param name="documentLanguage">Language tag, for example "en-US".</param>
+        /// <returns>Reference to the current object.</returns>
+        public HtmlToPdfClient setDocumentLanguage(string documentLanguage)
+        {
+            parameters["doc_language"] = documentLanguage;
+            return this;
+        }
+
+        /// <summary>
         /// Set PDF user password.
         /// </summary>
         /// <param name="userPassword">PDF user password.</param>
@@ -859,6 +917,22 @@ namespace SelectPdf.Api
         public HtmlToPdfClient setWebPageHeight(int webPageHeight)
         {
             parameters["web_page_height"] = webPageHeight.ToString();
+            return this;
+        }
+
+        /// <summary>
+        /// Leave out the content below the web page height (set with <see cref="setWebPageHeight"/>) instead of letting the page flow onto further pages.
+        /// </summary>
+        /// <remarks>
+        /// When not set, each rendering engine keeps its own behavior: WebKit and WebKit Restricted leave the content out whenever a web page height is set,
+        /// Blink and Chromium convert the whole page. Set it to True or False to choose explicitly. It needs a non-zero web page height; with 0 there is no
+        /// height to fix the page at and the setting is ignored. With WebKit, a fixed size also cuts off content wider than the web page width.
+        /// </remarks>
+        /// <param name="webPageFixedSize">True to cut the page at the web page height, False to convert the whole page.</param>
+        /// <returns>Reference to the current object.</returns>
+        public HtmlToPdfClient setWebPageFixedSize(bool webPageFixedSize)
+        {
+            parameters["web_page_fixed_size"] = webPageFixedSize.ToString();
             return this;
         }
 
@@ -1672,6 +1746,34 @@ namespace SelectPdf.Api
         }
 
         /// <summary>
+        /// Set the user name for HTTP Basic authentication on the web page being converted.
+        /// </summary>
+        /// <remarks>
+        /// Use it together with <see cref="setAuthPassword"/>. The demo endpoint does not send credentials; it reports the value in <see cref="DroppedFields"/>.
+        /// </remarks>
+        /// <param name="authUsername">User name for HTTP Basic authentication.</param>
+        /// <returns>Reference to the current object.</returns>
+        public HtmlToPdfClient setAuthUsername(string authUsername)
+        {
+            parameters["auth_username"] = authUsername;
+            return this;
+        }
+
+        /// <summary>
+        /// Set the password for HTTP Basic authentication on the web page being converted.
+        /// </summary>
+        /// <remarks>
+        /// Use it together with <see cref="setAuthUsername"/>. The demo endpoint does not send credentials; it reports the value in <see cref="DroppedFields"/>.
+        /// </remarks>
+        /// <param name="authPassword">Password for HTTP Basic authentication.</param>
+        /// <returns>Reference to the current object.</returns>
+        public HtmlToPdfClient setAuthPassword(string authPassword)
+        {
+            parameters["auth_password"] = authPassword;
+            return this;
+        }
+
+        /// <summary>
         /// Set a custom parameter. Do not use this method unless advised by SelectPdf.
         /// </summary>
         /// <param name="parameterName">Parameter name.</param>
@@ -1698,6 +1800,8 @@ namespace SelectPdf.Api
         /// <returns>List of web elements locations.</returns>
         public IList<WebElement> getWebElements()
         {
+            if (IsDemoMode)
+                throw new DemoUnsupportedException("pdf_web_elements_selectors");
             WebElementsClient webElementsClient = new WebElementsClient(parameters["key"], jobId);
             webElementsClient.setApiEndpoint(apiWebElementsEndpoint);
 
